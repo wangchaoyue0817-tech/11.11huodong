@@ -2,6 +2,7 @@ import {START,END,PRIZES,active,balances,draw,leaderboard,isEligibleCategory} fr
 import {loadEvent,saveEvent,eventNow} from './expert-event-session.js';
 import {machineMarkup,mountMachine,prizeArt} from './capsule-machine.js';
 import {voucherMarkup} from './reward-ui.js';
+import {celebrateGacha,outcomeTier} from './gacha-celebration.js';
 
 export const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const eventCount=state=>state.orders.filter(o=>o.uid===state.uid&&o.at>=START&&o.at<END&&o.eligible!==false&&isEligibleCategory(o.category)).length;
@@ -43,19 +44,19 @@ export function goExpert(){
 }
 let currentDialog=null;
 export function closeEventDialog(){if(currentDialog?.open)currentDialog.close('programmatic');}
-export function showEventDialog(title,body,{className='',onClose}={}){
+export function showEventDialog(title,body,{className='',onClose,celebration=null}={}){
  closeEventDialog();
- const previousFocus=document.activeElement;
+ const previousFocus=document.activeElement;let stopCelebration=null;
  const dialog=document.createElement('dialog');dialog.className=`ev-dialog ${className}`;
  dialog.innerHTML=`<header class="ev-dialog-head"><span>${escapeHtml(title)}</span><button class="ev-icon-button" data-ev-close aria-label="关闭">${icon('close')}</button></header><div class="ev-dialog-body">${body}</div>`;
- dialog.setAttribute('aria-label',title);document.body.append(dialog);currentDialog=dialog;
+ dialog.setAttribute('aria-label',title);dialog.setAttribute('tabindex','-1');document.body.append(dialog);currentDialog=dialog;
  dialog.querySelector('[data-ev-close]').onclick=()=>dialog.close('dismiss');
  dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close('dismiss');}});
- dialog.addEventListener('close',()=>{const reason=dialog.returnValue||'dismiss';dialog.remove();if(currentDialog===dialog)currentDialog=null;if(reason==='dismiss'&&previousFocus?.isConnected)previousFocus.focus?.({preventScroll:true});onClose?.({reason});},{once:true});
- dialog.showModal();focusProgress(dialog);return dialog;
+ dialog.addEventListener('close',()=>{const reason=dialog.returnValue||'dismiss';stopCelebration?.();dialog.remove();if(currentDialog===dialog)currentDialog=null;if(reason==='dismiss'&&previousFocus?.isConnected)previousFocus.focus?.({preventScroll:true});onClose?.({reason});},{once:true});
+ dialog.showModal();dialog.focus?.({preventScroll:true});focusProgress(dialog);if(celebration)stopCelebration=celebrateGacha(dialog,celebration);return dialog;
 }
 export function openRules({onReturn}={}){
- return showEventDialog('专鉴有礼 · 活动规则',`<div class="ev-rules"><div class="ev-eyebrow">10.27 — 11.10</div><h2>认真鉴别，好礼相伴</h2>
+ return showEventDialog('专鉴有礼 · 活动规则',`<div class="ev-rules">
  <p>活动时间：2026 年 10 月 27 日 00:00 至 11 月 11 日 00:00（北京时间）。</p>
  <h3>六大品类，专鉴有礼</h3><p>美妆、包袋、鞋靴、服饰、手表、数码 3C 参与。提交成功即累计 1 单，每 2 单得 1 张普通券；每 10 单得 1 张高级券，该节点不再发普通券。跨天累计，无次数上限。其他品类仍可免费专鉴，不计入本活动。</p>
  <h3>每天一次免费机会</h3><p>每日首次进入活动自动领取 1 张普通券，当天有效，未使用不顺延。鉴定获得的券有效至活动结束。优先使用即将到期的券。</p>
@@ -66,15 +67,14 @@ export function openRules({onReturn}={}){
  <p class="ev-demo-note">当前为交互演示。鉴定、奖励、榜单及库存为本机模拟，商品图为奖品示意。</p></div>`,{onClose:({reason})=>{if(reason==='dismiss')onReturn?.();}});
 }
 export function openProgress({reward=null}={}){
- const s=loadEvent(),n=eventCount(s),premium=reward?.pool==='advanced';
- const d=showEventDialog(reward?'奖励已到账':'专鉴进度已更新',`
+ const s=loadEvent(),premium=reward?.pool==='advanced';
+ const d=showEventDialog(reward?'抽奖券到账':'专鉴进度',`
  <div class="ev-reward-hero ${premium?'is-premium':''} ${reward?'is-awarded':''}">
- <div class="ev-reward-orbit"></div><div class="ev-reward-rays" aria-hidden="true"></div><div class="ev-reward-particles" aria-hidden="true">${Array.from({length:12},(_,i)=>`<i style="--particle:${i}"></i>`).join('')}</div><div class="ev-reward-emblem">${rewardArt(premium?'advanced':'ordinary')}${reward?'<span class="ev-reward-count">+1</span>':''}</div>
- <span class="ev-eyebrow">${reward?(premium?'高级礼遇 · 已解锁':'专鉴有礼 · 已到账'):'每一单，都有新的期待'}</span>
- <h2>${reward?`${premium?'高级':'普通'}抽奖券 <em>+1</em>`:`已完成 ${n} 单专鉴`}</h2><p>${reward?`第 ${n} 单的奖励已放入抽奖中心`:'提交成功已计入活动进度'}</p>
+ ${reward?`<div class="ev-reward-emblem">${rewardArt(premium?'advanced':'ordinary')}</div>`:''}
+ <h2>${reward?`${premium?'高级':'普通'}抽奖券 <em>+1</em>`:'提交成功'}</h2>
  </div>${progressMarkup(s)}
- <button class="ev-primary" data-center>${icon('gift')} 去抽奖中心 ${icon()}</button>
- <button class="ev-rank-teaser" data-rank><span class="ev-rank-small">${icon('crown')}</span><span><strong>鉴真王者 · 避雷王者</strong><small>争取 200 元红包与终身免费专鉴</small></span>${icon()}</button>`,{className:premium?'ev-premium-dialog':''});
+ <button class="ev-primary" data-center>去抽奖中心 ${icon()}</button>
+ <button class="ev-rank-teaser" data-rank><span class="ev-rank-small">${icon('crown')}</span><span><strong>王者榜</strong><small>前三名有礼</small></span>${icon()}</button>`,{className:`ev-progress-dialog ${premium?'ev-premium-dialog':''}`,celebration:reward?(premium?'advanced':'ordinary'):null});
  d.querySelector('[data-center]').onclick=()=>{d.close('navigate');window.jianxNavigate('lottery',{event:'expert',pool:premium?'advanced':'ordinary'});};
  d.querySelector('[data-rank]').onclick=()=>{d.close();openLeaderboard();};
  return d;
@@ -82,10 +82,10 @@ export function openProgress({reward=null}={}){
 export function openDraw({pool='ordinary',count=1,onChange,onReturn,random}={}){
  const s=loadEvent(),now=eventNow();
  const response=draw(s,{pool,count,requestId:crypto.randomUUID()},now,random);
- if(response.error){showEventDialog('暂时无法扭蛋',`<div class="ev-empty">${icon('ticket')}<h2>${escapeHtml(response.error)}</h2><p>完成参与品类的专鉴，继续积攒抽奖机会。</p><button class="ev-primary" data-expert>去专鉴 ${icon()}</button></div>`,{onClose:({reason})=>{if(reason==='dismiss')onReturn?.();}}).querySelector('[data-expert]').onclick=()=>{closeEventDialog();goExpert();};return null;}
- saveEvent(response.state);onChange?.(response);let controller=null,done=false;
- const d=showEventDialog(pool==='advanced'?'高级扭蛋 · 尊享奖池':'好运扭蛋 · 普通奖池',`<div class="ev-draw-stage">${machineMarkup({pool,compact:true})}<h2>${count===5?'五份期待，一起揭晓':'正在送出你的好运'}</h2><p>本次使用 ${count} 张${pool==='advanced'?'高级':'普通'}券</p><button class="ev-text-button" data-skip>跳过动画 ${icon()}</button></div>`,{className:'ev-draw-dialog',onClose:({reason})=>{controller?.destroy();if(reason==='dismiss')onReturn?.();}});
- const reveal=()=>{if(done||!d.open)return;done=true;controller?.destroy();d.querySelector('.ev-dialog-body').innerHTML=resultMarkup(response.batch,{canReturn:Boolean(onReturn)});
+ if(response.error){showEventDialog('暂时无法扭蛋',`<div class="ev-empty">${rewardArt(pool)}<h2>${escapeHtml(response.error)}</h2><button class="ev-primary" data-expert>去专鉴 ${icon()}</button></div>`,{onClose:({reason})=>{if(reason==='dismiss')onReturn?.();}}).querySelector('[data-expert]').onclick=()=>{closeEventDialog();goExpert();};return null;}
+ saveEvent(response.state);onChange?.(response);let controller=null,done=false,stopCelebration=null;
+ const d=showEventDialog(pool==='advanced'?'高级扭蛋':'普通扭蛋',`<div class="ev-draw-stage">${machineMarkup({pool,compact:true})}<p>正在开启 ${count} 枚扭蛋</p><button class="ev-text-button" data-skip>跳过动画 ${icon()}</button></div>`,{className:'ev-draw-dialog',onClose:({reason})=>{controller?.destroy();stopCelebration?.();if(reason==='dismiss')onReturn?.();}});
+ const reveal=()=>{if(done||!d.open)return;done=true;controller?.destroy();d.querySelector('.ev-dialog-body').innerHTML=resultMarkup(response.batch,{canReturn:Boolean(onReturn)});d.classList.add('ev-result-dialog');d.querySelector('.ev-dialog-head>span').textContent='扭蛋结果';stopCelebration=celebrateGacha(d,outcomeTier(response.batch));
  d.querySelector('[data-result-prizes]').onclick=()=>{d.close('navigate');window.jianxNavigate('prizes',{event:'expert',pool:response.batch.pool});};
  d.querySelector('[data-result-expert]').onclick=()=>{d.close('navigate');goExpert();};
  d.querySelector('[data-result-again]').onclick=()=>{d.close('repeat');openDraw({pool,count,onChange,onReturn});};
@@ -96,26 +96,25 @@ export function openDraw({pool='ordinary',count=1,onChange,onReturn,random}={}){
  return response.batch;
 }
 export function resultMarkup(batch,{canReturn=false}={}){
- const won=batch.rewards.filter(r=>r.type!=='none'),many=batch.rewards.length===5;
+ const tier=outcomeTier(batch),won=tier!=='none',many=batch.rewards.length===5;
  const vouchers=batch.rewards.filter(r=>r.type==='voucher');
  const other=batch.rewards.filter(r=>r.type!=='voucher');
- return `<div class="ev-result-heading"><span class="ev-eyebrow">${batch.pool==='advanced'?'高级奖池':'普通奖池'} · ${many?'五连抽':'单次抽取'}</span><h2>${won.length?'好礼已抵达':'再接再厉'}</h2><p>${won.length?'奖品已存入「我的奖品」':'完成专鉴，积攒下一份好运'}</p></div>
- ${other.length?`<div class="ev-result-grid ${many?'is-five':''}">${other.map(r=>`<article class="ev-result-card ${r.type==='physical'?'is-physical':'is-empty'}">${prizeArt(r.type==='physical'?r.prizeId:'none')}<strong>${escapeHtml(r.type==='physical'?PRIZES.find(p=>p.id===r.prizeId)?.name:'再接再厉')}</strong><small>${r.type==='physical'?'实物奖品 · 已存入我的奖品':'继续积攒好运'}</small></article>`).join('')}</div>`:''}
+ return `<section class="ev-result" data-result-tier="${tier}"><div class="ev-result-heading"><span class="ev-eyebrow">${batch.pool==='advanced'?'高级奖池':'普通奖池'} · ${many?'五连抽':'单次抽取'}</span><h2>${tier==='physical'?'恭喜，抽中实物好礼':tier==='voucher'?'获得专家线上鉴别券':'再接再厉'}</h2></div>
+ ${other.length?`<div class="ev-result-grid ${many?'is-five':''}">${other.map(r=>`<article class="ev-result-card ${r.type==='physical'?'is-physical':'is-empty'}">${prizeArt(r.type==='physical'?r.prizeId:'none')}<strong>${escapeHtml(r.type==='physical'?PRIZES.find(p=>p.id===r.prizeId)?.name:'再接再厉')}</strong></article>`).join('')}</div>`:''}
  ${vouchers.length?voucherMarkup(vouchers.length,vouchers[0].expiresAt,{title:'专家线上鉴别券',category:'双11扭蛋 · 专家服务',displayExpiresAt:vouchers[0].expiresAt-1,action:'result-voucher',readOnly:true}):''}
- <div class="ev-result-rule">每鉴定 <b>2</b> 单得普通券 · 每 <b>10</b> 单得高级券</div>
- <button class="ev-primary" data-result-expert>限时免费，去专鉴 ${icon()}</button>
- <div class="ev-result-actions"><button class="ev-text-button" data-result-prizes>查看我的奖品</button><button class="ev-text-button" data-result-again>再扭${many?'五次':'一次'} ${icon()}</button></div>${canReturn?'<button class="ev-text-button ev-full ev-result-back" data-result-back>返回活动，选择其他奖池</button>':''}`;
+ ${won?'<p class="ev-result-saved">已存入「我的奖品」</p>':''}
+ <div class="ev-result-actions"><button class="${won?'ev-primary':'ev-text-button'}" data-result-prizes>查看我的奖品 ${icon()}</button><button class="${won?'ev-text-button':'ev-primary'}" data-result-expert>去专鉴 ${icon()}</button><button class="ev-secondary" data-result-again>再扭${many?'五次':'一次'}</button></div>${canReturn?'<button class="ev-text-button ev-full ev-result-back" data-result-back>返回活动</button>':''}</section>`;
 }
 
 export function activityHubMarkup(state,now,{pool='ordinary'}={}){
  const balance=balances(state,now),available=active(now),advanced=pool==='advanced';
- return `<div class="ev-hub-top"><span class="ev-hub-intro">选一份好礼，开启今天的好运</span><div class="ev-hub-tools"><button data-hub-rules>${icon('spark')}规则</button><button data-hub-rank>${icon('crown')}王者榜</button></div></div>
+ return `<div class="ev-hub-top"><div class="ev-hub-tools"><button data-hub-rules>${icon('spark')}规则</button><button data-hub-rank>${icon('crown')}王者榜</button></div></div>
  <div class="ev-hub-pools" role="tablist" aria-label="选择扭蛋奖池">${['ordinary','advanced'].map(value=>`<button role="tab" data-hub-pool="${value}" aria-selected="${pool===value}">${rewardArt(value)}<span><strong>${value==='advanced'?'高级奖池':'普通奖池'}</strong><small>可用 <b>${balance[value]}</b> 张券</small></span><i>${pool===value?icon('check'):''}</i></button>`).join('')}</div>
- <div class="ev-hub-stage">${machineMarkup({pool,compact:true})}<p>${advanced?'YSL 气垫 · COACH · 雷蛇耳机':'精选美妆、护肤、香水小样'}<span>还有免费专家鉴定券</span></p></div>
+ <div class="ev-hub-stage">${machineMarkup({pool,compact:true})}</div>
  <div class="ev-hub-draw-controls"><button class="ev-secondary" data-hub-draw="1" ${!available||balance[pool]<1?'disabled':''}><strong>${pool==='ordinary'&&balance.daily?'免费扭一次':'扭一次'}</strong><small>使用 1 张${advanced?'高级':'普通'}券</small></button><button class="ev-primary ${advanced?'ev-gold-primary':''}" data-hub-draw="5" ${!available||balance[pool]<5?'disabled':''}><strong>五次一起扭</strong><small>使用 5 张同种券</small></button></div>
  <p class="ev-hub-expiry">${icon('clock')}${!available?(now<START?'活动尚未开始':'活动已结束，奖品与记录保留'):balance.daily&&pool==='ordinary'?'今日赠券当天有效，扭蛋时优先使用':balance[pool]<1?'当前奖池暂无可用券，去专鉴继续积累':'鉴定获得的抽奖券，活动结束时失效'}</p>
  ${progressMarkup(state)}
- <div class="ev-hub-footer"><button class="ev-text-button" data-hub-prizes>${icon('gift')}我的奖品</button><button class="ev-text-button" data-hub-center>抽奖记录 ${icon()}</button><button class="ev-text-button" data-hub-expert>去专鉴 ${icon()}</button></div>`;
+ <div class="ev-hub-footer"><button class="ev-text-button" data-hub-prizes>${icon('gift')}我的奖品</button><button class="ev-text-button" data-hub-expert>去专鉴 ${icon()}</button></div>`;
 }
 
 export function openActivityHub({onChange,pool='ordinary'}={}){
@@ -134,12 +133,11 @@ export function openActivityHub({onChange,pool='ordinary'}={}){
   d.querySelector('[data-hub-rules]').onclick=()=>{d.close('rules');openRules({onReturn:reopen});};
   d.querySelector('[data-hub-rank]').onclick=()=>{d.close('ranking');openLeaderboard('true',{onReturn:reopen});};
   d.querySelector('[data-hub-prizes]').onclick=()=>{d.close('navigate');window.jianxNavigate?.('prizes',{event:'expert',pool:selected});};
-  d.querySelector('[data-hub-center]').onclick=()=>{d.close('navigate');window.jianxNavigate?.('prizes',{event:'expert',pool:selected});};
   d.querySelector('[data-hub-expert]').onclick=()=>{d.close('navigate');goExpert();};
   focusProgress(d);
  };
  const refresh=()=>{if(d?.open)render();};
- d=showEventDialog('专鉴有礼 · 好运扭蛋','',{className:'ev-hub-dialog',onClose:cleanup});
+ d=showEventDialog('双11扭蛋','',{className:'ev-hub-dialog',onClose:cleanup});
  render();window.addEventListener('expert-event-change',refresh);return d;
 }
 

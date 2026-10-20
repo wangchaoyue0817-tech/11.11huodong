@@ -10,7 +10,7 @@ import {DEMO_SCENE_GROUPS,buildDemoScene} from '../public/expert-event-demo.js';
 
 const source=readFileSync(new URL('../public/expert-event-home.js',import.meta.url),'utf8');
 const T=model.START+10*3600000;
-test('the compact activity leaves the restored upper hero and its responsive styling unchanged',()=>{
+test('the frameless activity leaves the restored upper hero and its responsive styling unchanged',()=>{
   const html=readFileSync(new URL('../public/home.html',import.meta.url),'utf8');
   const css=readFileSync(new URL('../public/expert-refinement.css',import.meta.url),'utf8');
   const homeCss=readFileSync(new URL('../public/expert-event-home.css',import.meta.url),'utf8');
@@ -187,7 +187,7 @@ test('a first ticket claimed in the center still gets its guide once on the expe
   const initial=model.claimDaily(model.fresh(),T).state;
   const f=fixture({initial});f.enter();
   assert.equal(f.dialogs.length,1);
-  assert.match(f.dialogs[0].title,/好运/);
+  assert.equal(f.dialogs[0].title,'每日赠券');
   const ticketArt=f.dialogs[0].querySelector('.eh-guide-ticket .ev-reward-art');
   assert(ticketArt,'the first free ticket uses the same lottery-ticket artwork as the pool and milestones');
   assert.equal(ticketArt.getAttribute('src'),'assets/gacha/reward-ordinary-v6.png');
@@ -273,13 +273,13 @@ test('demo milestones grant immediately usable tickets instead of future-dated b
   }
 });
 
-test('compact activity keeps all destinations reachable without inline draw controls or duplicate information',()=>{
+test('frameless activity keeps all destinations reachable without inline draw controls or duplicate information',()=>{
   const f=fixture({initial:buildDemoScene('progress-14').state});
   const home=f.document.getElementById('expertEvent');
   const before=f.state;
   assert(home.querySelector('.eh-machine-display'));
   assert(home.querySelector('.eh-campaign-copy'));
-  assert(home.querySelector('.eh-campaign-links'));
+  assert(home.querySelector('.eh-machine-stage'));
   assert.equal(home.querySelector('.ev-progress'),null);
   assert.equal(home.querySelector('[data-draw]'),null);
   assert.equal(home.querySelector('[data-pool]'),null);
@@ -289,8 +289,11 @@ test('compact activity keeps all destinations reachable without inline draw cont
   }
   assert.doesNotMatch(home.textContent,/美妆[、/\s]+包袋|鞋靴[、/\s]+服饰|手表[、/\s]+数码/);
   assert.doesNotMatch(home.textContent,/好礼扭出来|YSL|COACH|雷蛇|累计专鉴|我的抽奖券|开启好运/);
-  assert.equal(home.querySelector('h2').textContent,'专鉴有礼');
-  assert.match(home.querySelector('.eh-campaign-copy p').textContent,/每天免费扭一次/);
+  assert.equal(home.querySelector('h2').textContent,'专鉴有礼·替你的双11 战利品兜底');
+  assert.equal(home.querySelector('.eh-campaign-copy p'),null,'the hero adds no repeated marketing paragraph');
+  assert.equal(home.querySelector('.eh-enter-button span').textContent,'去扭蛋');
+  assert.equal(home.querySelector('.eh-rank-pill').parentElement,home.querySelector('.eh-machine-stage'),
+    'the ranking entrance belongs to the machine stage rather than a second promotional card');
   assert.match(readFileSync(new URL('../public/expert-event-ui.js',import.meta.url),'utf8'),/今日赠券当天有效/,
     'the shared hub retains the expiry reminder removed from the compact entry');
   assert.deepEqual(home.querySelectorAll('[data-eh]').map(button=>button.dataset.eh).sort(),
@@ -306,34 +309,38 @@ test('compact activity keeps all destinations reachable without inline draw cont
   assert.equal(f.rankings.length,1);
   assert.equal(f.rules.length,1);
   assert.equal(f.dialogs.at(-1).title,'模拟场景');
-  assert.deepEqual(f.state,before,'opening compact entry destinations does not consume tickets or change order progress');
+  assert.deepEqual(f.state,before,'opening hero destinations does not consume tickets or change order progress');
 });
 
-test('compact entry removes the old vertical promotion styling and retains horizontal composition on narrow phones',()=>{
+test('machine hero has no surrounding card and keeps the CTA and ranking entrance layered on its stage',()=>{
   const css=readFileSync(new URL('../public/expert-event-home.css',import.meta.url),'utf8');
   assert.doesNotMatch(css,/\.eh-(?:campaign-top|campaign-heading|event-chip|rank-spark|prize-caption|enter-arrow|daily-note|pocket)\b/,
     'removed content must not retain obsolete presentation rules');
   const campaign=css.match(/\.eh-campaign\{([^}]+)\}/)?.[1]||'';
-  assert.match(campaign,/display:grid/);
-  assert.match(campaign,/grid-template-columns:minmax\(0,1fr\) \d+px/);
-  const minimumHeight=Number(campaign.match(/min-height:(\d+)px/)?.[1]);
-  assert(minimumHeight>0&&minimumHeight<=170,'the secondary activity entry should reserve at most 170px');
-  assert.doesNotMatch(css,/grid-template-columns:1fr(?:;|})/,
-    'narrow screens must not stack the machine beneath the copy again');
+  assert.match(campaign,/border:0/);
+  assert.match(campaign,/background:none/);
+  assert.doesNotMatch(campaign,/border-radius|grid-template-columns/,'do not retain the compact side-by-side card');
+  const machine=css.match(/\.eh-machine-display\{([^}]+)\}/)?.[1]||'';
+  assert.match(machine,/width:100%/,'the device uses the entire stage');
+  for(const selector of ['eh-enter-button','eh-rank-pill']){
+    assert.match(css.match(new RegExp(`\\.${selector}\\{([^}]+)\\}`))?.[1]||'',/position:absolute/,
+      'main action and ranking entrance float over the machine');
+  }
+  assert.match(css,/@media\(prefers-reduced-motion:reduce\)[^\n]+\.eh-enter-button:before\{animation:none\}/);
 });
 
-test('compact daily entry distinguishes available tickets and ended campaigns without altering ticket balances',()=>{
+test('machine entry uses the requested CTA and preserves inactive states without altering ticket balances',()=>{
   const claimed=model.claimDaily(model.fresh(),T).state;
   const consumed=model.draw(claimed,{pool:'ordinary',count:1,requestId:'compact-guide'},T,()=>0).state;
   for(const [initial,now,buttonText,detail] of [
-    [claimed,T,'免费扭一次','每天免费扭一次'],
-    [consumed,T,'去扭蛋','每天免费扭一次'],
+    [claimed,T,'去扭蛋',null],
+    [consumed,T,'去扭蛋',null],
     [claimed,model.START-1,'查看活动','10 月 27 日开启'],
     [claimed,model.END,'查看活动','本期活动已结束']
   ]){
     const f=fixture({initial,now});
     assert.equal(f.document.querySelector('.eh-enter-button span').textContent,buttonText);
-    assert.equal(f.document.querySelector('.eh-campaign-copy p').textContent,detail);
+    assert.equal(f.document.querySelector('.eh-event-status')?.textContent||null,detail);
     f.document.querySelector('.eh-enter-button').click();
     assert.equal(f.hubs.length,1);
     assert.deepEqual(f.state,initial);
@@ -404,7 +411,7 @@ test('progress scene triggers reward feedback and replay restores the same earne
   assert.equal(eventCount(f.state),0);
   assert.deepEqual(model.balances(f.state,T),{ordinary:1,advanced:0,daily:1});
   assert.equal(f.scenes.at(-1).id,'first');
-  assert.match(f.dialogs.at(-1).title,/好运/);
+  assert.equal(f.dialogs.at(-1).title,'每日赠券');
 });
 
 test('draw setup passes targeted five-draw parameters and an isolated random callback to shared draw UI',()=>{

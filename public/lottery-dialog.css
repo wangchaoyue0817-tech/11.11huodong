@@ -1,0 +1,153 @@
+/* v7 · shared lottery dialog surfaces; scoped so service cards stay unchanged. */
+.ev-dialog,.ac-dialog{
+ --ld-text:#f5f0ff;--ld-copy:#cfc2ed;--ld-line:#bca3ff48;
+ box-sizing:border-box;width:calc(100% - 24px);max-width:440px;max-height:calc(100svh - 24px);
+ margin:auto;padding:0;border:1px solid var(--ld-line);border-radius:24px;
+ background:radial-gradient(ellipse at 80% 0%,#8e60ed36,transparent 48%),linear-gradient(150deg,#302665,#252158 64%,#2f2261);
+ color:var(--ld-text);box-shadow:inset 0 1px #eadcff3b,0 24px 80px #14134266;
+ font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
+ overflow:auto;scrollbar-width:none;isolation:isolate;
+}
+.ev-dialog::backdrop,.ac-dialog::backdrop{background:#141339ad;backdrop-filter:blur(8px)}
+.ev-dialog:focus{outline:none}
+.ev-dialog[open],.ac-dialog[open]{animation:ld-enter .32s cubic-bezier(.2,.75,.2,1) both}
+.ev-dialog *,.ac-dialog *{box-sizing:border-box}
+.ev-dialog-head,.ac-dialog-head{
+ position:sticky;top:0;z-index:9;display:flex;align-items:center;justify-content:space-between;
+ min-height:56px;padding:6px 8px 6px 20px;border:0;
+ background:#302665eb;backdrop-filter:blur(16px);color:#e8ddff;
+ font-size:14px;font-weight:500;
+}
+.ac-dialog-head h2{font-size:14px;font-weight:500;margin:0}
+.ev-dialog-head>span{min-width:0}
+.ev-dialog .ev-icon-button,.ac-dialog .ac-icon-button{
+ position:relative;flex-shrink:0;width:44px;height:44px;margin:0;border:0;border-radius:50%;
+ display:grid;place-items:center;background:transparent;color:#d8c9f5;cursor:pointer;
+}
+.ev-dialog .ev-icon-button::before,.ac-dialog .ac-icon-button::before{content:"";position:absolute;inset:7px;border-radius:50%;border:1px solid #c4a9ff30;background:#c2a8ff0b;pointer-events:none}
+.ev-dialog .ev-icon-button svg,.ac-dialog .ac-icon-button svg{width:17px;height:17px}
+.ev-dialog-body,.ac-dialog-body{position:relative;z-index:1;padding:0 18px max(18px,env(safe-area-inset-bottom))}
+.ac-dialog-body{padding-top:8px}
+.ev-dialog :is(button,[tabindex]):focus-visible,.ac-dialog :is(button,[tabindex]):focus-visible{outline:2px solid #d5beff;outline-offset:3px}
+.ev-dialog :is(.ev-primary,.ev-secondary),.ac-dialog :is(.ac-primary,.ac-secondary){
+ min-height:48px;border-radius:14px;font-size:14px;font-weight:600;
+}
+.ev-dialog .ev-primary,.ac-dialog .ac-primary{
+ color:#fff;border:1px solid #cebaff70;
+ background:linear-gradient(105deg,#595ff2,#7b55ea 55%,#b55ad5);
+ box-shadow:inset 0 1px #f4e8ff55,0 7px 22px #7860f133;
+}
+.ev-dialog .ev-secondary,.ac-dialog .ac-secondary{background:#9d79f01a;border:1px solid #bc9cf455;color:#e8dcff;box-shadow:inset 0 1px #e8dcff12}
+.ev-dialog .ev-text-button{min-height:44px;font-size:12px;color:var(--ld-copy)}
+.ev-dialog .ev-text-button .ev-icon{width:14px;height:14px}
+.ev-dialog button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.ev-dialog .ev-eyebrow{font-size:11px;font-weight:400;letter-spacing:0;color:var(--ld-copy)}
+.ev-dialog .ev-progress{background:transparent;border:0;box-shadow:none;margin:12px 0 16px;padding:6px 0}
+.ev-dialog .ev-progress-heading,.ev-dialog .ev-progress-note{padding-left:0;padding-right:0}
+.ev-dialog .ev-progress-heading{color:#eee4ff}
+.ev-dialog .ev-progress-heading b{color:#eee0ff}
+.ev-dialog .ev-progress-rail{background:#9e85de29;box-shadow:none}
+.ev-dialog .ev-progress-fill{background:linear-gradient(90deg,#9875f5,#d8bbff)}
+.ev-dialog .ev-progress-note>span:last-child{display:none}
+.ev-dialog .ev-milestone-dot:before{border-color:#39306a}
+.ev-dialog .ev-milestone.is-done>b{color:#f2e7ff}
+
+/* The artwork carries the reward; one title and no repeated arrival copy. */
+.ev-reward-hero{position:relative;text-align:center;padding:4px 0 2px;isolation:isolate}
+.ev-reward-emblem{position:relative;display:grid;place-items:center;width:200px;height:142px;margin:0 auto;filter:drop-shadow(0 8px 22px #a372f252)}
+.ev-reward-emblem:before{content:"";position:absolute;inset:10% -8%;z-index:-1;border-radius:50%;background:radial-gradient(ellipse,#b382ff42,transparent 68%)}
+.ev-reward-emblem .ev-reward-art{width:200px;height:136px;object-fit:contain}
+.ev-reward-count{position:absolute;right:12px;bottom:6px;color:#f5eaff;font-size:25px;font-weight:650;text-shadow:0 2px 14px #b785ff}
+.ev-reward-hero h2{font-size:23px;font-weight:600;margin:6px 0 4px;line-height:1.45;letter-spacing:-.4px}
+.ev-reward-hero h2 em{font-style:normal;color:#d9b8ff}
+.ev-reward-hero.is-awarded .ev-reward-emblem{animation:ld-ticket-in .65s cubic-bezier(.2,.8,.2,1) both}
+.ev-reward-hero.is-premium .ev-reward-emblem{animation:ld-premium-in 1s cubic-bezier(.2,.8,.2,1) both;filter:drop-shadow(0 8px 22px #e9c58440)}
+.ev-reward-hero.is-premium .ev-reward-emblem:before{background:radial-gradient(ellipse,#eec99628,transparent 70%)}
+.ev-reward-hero.is-premium :is(h2 em,.ev-reward-count){color:#f6dfaf}
+.ev-dialog.ev-premium-dialog{border-color:#dfc18b61;background:radial-gradient(ellipse at 50% 8%,#d2a56819,transparent 48%),linear-gradient(150deg,#302665,#252158 64%,#352463)}
+.ev-rank-teaser{display:flex;align-items:center;gap:9px;width:100%;min-height:48px;margin:12px 0 0;padding:6px 0;background:transparent;border:0;border-top:1px solid #c5a9ff25;font:inherit;color:#ebd6af;text-align:left;cursor:pointer}
+.ev-rank-teaser>span:nth-child(2){display:flex;align-items:center;justify-content:space-between;flex:1;gap:8px}
+.ev-rank-teaser strong{font-size:13px;font-weight:500}
+.ev-rank-teaser small{font-size:11px;color:#cbbcec}
+.ev-rank-small{width:26px;height:30px;display:grid;place-items:center}
+.ev-rank-teaser>.ev-icon{width:14px}
+
+/* Draw picker: compact controls, device, slim shared progress. */
+.ev-hub-top{display:flex;justify-content:flex-end;margin:-5px 0 5px}
+.ev-hub-tools{display:flex;gap:8px}
+.ev-hub-tools button{display:flex;align-items:center;gap:4px;min-height:36px;padding:4px 6px;background:transparent;border:0;font:inherit;font-size:12px;color:#d4c3f3;cursor:pointer}
+.ev-hub-tools button:last-child{color:#ead09e}
+.ev-hub-tools .ev-icon{width:16px;height:16px}
+.ev-hub-pools{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.ev-hub-pools>button{position:relative;display:flex;align-items:center;gap:4px;min-width:0;min-height:68px;padding:8px 6px;border:1px solid #b89aec33;border-radius:15px;background:#a782ed0c;color:var(--ld-text);font:inherit;text-align:left;cursor:pointer}
+.ev-hub-pools>button[aria-selected=true]{border-color:#c6a2ff9c;background:linear-gradient(120deg,#a67dfc30,#8864d813);box-shadow:inset 0 1px #e5d4ff25}
+.ev-hub-pools>button[data-hub-pool=advanced][aria-selected=true]{border-color:#e6c491a6;background:linear-gradient(120deg,#cea67322,#987ad21a)}
+.ev-hub-pools .ev-reward-art{width:48px;height:40px;flex-shrink:0}
+.ev-hub-pools strong{display:block;font-size:13px;font-weight:600}
+.ev-hub-pools small{display:block;font-size:11px;color:#cbbce6;margin-top:3px}
+.ev-hub-pools small b{font-size:14px;color:#e9d5ff}
+.ev-hub-pools [data-hub-pool=advanced] small b{color:#efdbb3}
+.ev-hub-pools i{position:absolute;right:5px;top:3px;color:#d9c1ff}
+.ev-hub-pools i .ev-icon{width:12px;height:12px}
+.ev-hub-stage{padding:5px 0;position:relative}
+.ev-hub-stage .gm-machine{width:min(100%,290px);margin:auto}
+.ev-hub-draw-controls{display:grid;grid-template-columns:1fr 1.12fr;gap:9px}
+.ev-hub-draw-controls button{display:flex;flex-direction:column;gap:4px;min-height:55px;padding:8px 5px}
+.ev-hub-draw-controls strong{font-size:14px;font-weight:600}
+.ev-hub-draw-controls small{font-size:10px;font-weight:400;opacity:.85}
+.ev-hub-expiry{display:flex;justify-content:center;align-items:center;gap:4px;color:var(--ld-copy);font-size:11px;margin:9px 0 0;line-height:1.6}
+.ev-hub-expiry .ev-icon{width:13px;height:13px}
+.ev-hub-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #b89aec20;padding-top:3px}
+.ev-hub-footer .ev-text-button{gap:4px}
+.ev-hub-footer .ev-icon{width:15px;height:15px}
+.ev-draw-stage{text-align:center}
+.ev-draw-stage .gm-machine{width:100%;max-width:340px;margin:auto}
+.ev-draw-stage p{font-size:13px;color:var(--ld-copy);margin:4px 0}
+.ev-result{position:relative}
+.ev-result-heading{text-align:center;padding:8px 0 14px}
+.ev-result-heading h2{font-size:22px;font-weight:600;line-height:1.4;margin:8px 0 0;color:#f5ebff;letter-spacing:-.3px}
+.ev-result[data-result-tier=physical] .ev-result-heading h2{color:#f6e1b7}
+.ev-result-grid{display:grid;grid-template-columns:1fr;gap:8px;margin:0 auto 12px;max-width:260px}
+.ev-result-card{display:flex;align-items:center;justify-content:center;flex-direction:column;min-width:0;padding:8px 10px 14px;position:relative;border:0;background:radial-gradient(ellipse at 50% 45%,#a775f22e,transparent 68%);animation:ld-ticket-in .6s ease-out both}
+.ev-result-card .gm-prize-art{width:174px;height:174px}
+.ev-result-card strong{font-size:14px;font-weight:500;margin:4px 0 0;text-align:center}
+.ev-result-card.is-physical{background:radial-gradient(ellipse at 50% 45%,#e6be8530,transparent 68%)}
+.ev-result-card.is-empty{background:radial-gradient(ellipse at 50% 50%,#9979ef22,transparent 70%)}
+.ev-result-grid:not(.is-five) .is-empty strong{display:none}
+.ev-result-grid.is-five{max-width:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ev-result-grid.is-five .ev-result-card{padding:5px 2px 8px;border-radius:12px;background-color:#9974dd0c}
+.ev-result-grid.is-five .ev-result-card.is-physical{grid-column:1/-1;padding:4px 0 10px;background-color:transparent}
+.ev-result-grid.is-five .gm-prize-art{width:min(74px,100%);height:74px}
+.ev-result-grid.is-five .is-physical .gm-prize-art{width:130px;height:130px}
+.ev-result-grid.is-five strong{font-size:12px}
+.ev-result-saved{text-align:center;margin:12px 0;font-size:11px;color:var(--ld-copy)}
+.ev-result-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.ev-result-actions .ev-primary{grid-column:1/-1;grid-row:1}
+.ev-result-actions .ev-text-button{font-size:13px}
+.ev-result-actions .ev-secondary{min-height:42px;font-size:13px}
+.ev-result-back{margin-top:6px}
+.ev-dialog .reward-coupon{--ticket-cutout:#2c235e;margin:0}
+.ev-empty{text-align:center;padding:12px 0}
+.ev-empty>.ev-reward-art{width:160px;height:110px;object-fit:contain;margin:auto}
+.ev-empty h2{font-size:20px;font-weight:600;margin:16px 0 24px}
+.ev-rules{font-size:13px;color:var(--ld-copy);line-height:1.9;padding-top:5px}
+.ev-rules h3{font-size:14px;color:#eee1ff;margin:20px 0 6px;font-weight:600}
+.ev-rules p{margin:8px 0}
+.ev-rules .ev-demo-note{font-size:11px;color:#b7a4d4}
+.ev-dialog .eh-guide{padding-top:2px}
+.ev-dialog .eh-guide-ticket{height:142px}
+.ev-dialog .eh-guide-ticket .ev-reward-art{width:190px;height:134px}
+.ev-dialog .eh-guide h2{font-size:24px;margin:8px 0}
+.ev-dialog .eh-guide p{color:var(--ld-copy);font-size:12px;margin:0 0 20px}
+.ac-dialog .ac-field input{background:#26215c;border-color:#b493e94d}
+.ac-dialog .ac-address-form .ac-primary{width:100%}
+/* The ranking retains its quiet indigo theme and independent scroll geometry. */
+.ev-dialog.ev-ranking-dialog{background:radial-gradient(ellipse at 50% 0%,#7056a91a,transparent 44%),linear-gradient(160deg,#232040,#191d39 62%,#24203e)}
+.ev-ranking-dialog .ev-dialog-head{background:#262142ed}
+.ev-ranking-dialog .ev-dialog-body{padding:0}
+@keyframes ld-enter{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ld-ticket-in{from{opacity:0;transform:translateY(18px) scale(.88) rotate(-5deg)}to{opacity:1;transform:none}}
+@keyframes ld-premium-in{from{opacity:0;transform:translateY(24px) scale(.8) rotateY(-35deg)}60%{opacity:1;transform:translateY(-4px) scale(1.03)}to{opacity:1;transform:none}}
+@media(max-width:350px){.ev-dialog,.ac-dialog{width:calc(100% - 16px)}.ev-dialog-body,.ac-dialog-body{padding-left:14px;padding-right:14px}.ev-hub-pools .ev-reward-art{width:37px}.ev-hub-pools strong{font-size:12px}.ev-result-heading h2{font-size:20px}.ev-hub-pools>button{gap:3px}.ev-reward-hero h2{font-size:21px}}
+@media(max-height:720px){.ev-hub-stage .gm-machine{max-width:236px}.ev-reward-emblem{height:118px}.ev-reward-emblem .ev-reward-art{height:112px}.ev-reward-hero h2{margin-top:3px}}
+@media(prefers-reduced-motion:reduce){.ev-dialog[open],.ac-dialog[open],.ev-reward-hero .ev-reward-emblem,.ev-result-card{animation:none!important;transition:none!important}}

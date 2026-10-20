@@ -50,7 +50,19 @@ test('Double 11 page puts both ticket types, inline machine and complete progres
   assert.match(html,/data-step="20"/);
   assert.ok(html.indexOf('data-action="pool:ordinary"')<html.indexOf('class="gm-machine'));
   assert.ok(html.indexOf('class="gm-machine')<html.indexOf('class="ev-progress'));
+  assert.ok(html.indexOf('class="ev-progress')<html.indexOf('class="et-tickets"'));
+  for(const action of ['tickets-unused','tickets-used','tickets-expired'])assert.ok(button(html,action));
   assert.doesNotMatch(html,/每一份认真|都有好运回应|选择一张好运入场券|下一颗惊喜|center-reward-batch|ac-record-group|中奖记录/);
+});
+
+test('Double 11 preserves the selected inline ticket status independently from the selected pool',()=>{
+  const state=withOrders(10);
+  const html=expertLotteryMarkup(state,END,{pool:'advanced',ticketStatus:'expired'});
+  assert.match(button(html,'pool:advanced'),/aria-selected="true"/);
+  assert.match(button(html,'tickets-expired'),/aria-pressed="true"/);
+  assert.match(html,/class="et-ticket-row is-expired"/);
+  assert.match(html,/data-ticket-id="milestone-order-10"/);
+  assert.match(html,/data-ticket-id="milestone-order-2"/);
 });
 
 test('draw controls use only the selected pool balance and never mix ordinary and advanced tickets',()=>{

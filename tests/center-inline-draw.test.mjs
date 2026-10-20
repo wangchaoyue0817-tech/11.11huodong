@@ -108,6 +108,7 @@ test('inline five-draw persists once, locks controls, and skips without re-debit
   assert.equal(h.snapshot().draws.length,1);
   assert.deepEqual(h.writes,[EVENT_KEY]);
   assert.equal(h.balance().ordinary,before.ordinary-5);
+  assert.equal(h.document.querySelectorAll('.gacha-celebration').length,0,'completed celebration removes its decoration');
 });
 
 test('single-draw completion reveals once and uses only the selected advanced ticket',async t=>{
@@ -175,4 +176,40 @@ test('disabled insufficient-ticket actions do not save a draw or mutate legacy h
   h.click('[data-action="draw-one"]');
   assert.equal(h.snapshot().draws.length,0);
   assert.deepEqual(h.writes,[]);
+});
+
+test('Double 11 ticket status switches stay inline, include both pools, and never alter stored balances',async t=>{
+  const h=await harness(t,orders(10)),before=h.snapshot(),balance=h.balance();
+  assert(h.document.querySelector('.et-tickets'));
+  assert.match(h.document.querySelector('#et-ticket-records').textContent,/高级抽奖券/);
+  h.click('[data-action="tickets-used"]');
+  assert.equal(h.document.querySelector('[data-action="tickets-used"]').getAttribute('aria-pressed'),'true');
+  assert.match(h.document.querySelector('#et-ticket-records').textContent,/暂无抽奖券使用记录/);
+  assert.equal(h.document.querySelector('#ac-dialog').open,undefined);
+  h.click('[data-action="tickets-expired"]');
+  assert.equal(h.document.querySelector('[data-action="tickets-expired"]').getAttribute('aria-pressed'),'true');
+  assert.match(h.document.querySelector('#et-ticket-records').textContent,/暂无已过期抽奖券/);
+  h.click('[data-action="tickets-unused"]');
+  assert.match(h.document.querySelector('#et-ticket-records').textContent,/普通抽奖券/);
+  assert.match(h.document.querySelector('#et-ticket-records').textContent,/高级抽奖券/);
+  assert.deepEqual(h.snapshot(),before);
+  assert.deepEqual(h.balance(),balance);
+  assert.deepEqual(h.writes,[]);
+});
+
+test('closing a revealed result removes celebration immediately without changing the saved draw',async t=>{
+  const h=await harness(t);
+  h.click('[data-action="pool:advanced"]');
+  h.click('[data-action="draw:1"]');
+  h.click('[data-action="skip-draw"]');
+  const dialog=h.dialog(),saved=h.snapshot();
+  assert(dialog);
+  assert(dialog.querySelector('.gacha-celebration'));
+  dialog.close();
+  assert.equal(dialog.querySelector('.gacha-celebration'),null);
+  assert.equal(dialog.isConnected,false);
+  t.mock.timers.tick(10000);
+  assert.equal(h.dialog(),null);
+  assert.deepEqual(h.snapshot(),saved);
+  assert.deepEqual(h.writes,[EVENT_KEY]);
 });

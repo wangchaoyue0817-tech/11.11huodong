@@ -149,7 +149,7 @@ function render() {
     node.setAttribute('aria-selected',String(selected));node.tabIndex=selected?0:-1;
   });
   $('ac-content').setAttribute('aria-labelledby',`tab-${route}`);
-  $('ac-content').innerHTML = route === 'prizes' ? unifiedPrizesMarkup(state,old.state,now,{legacyNow:legacyNow(),isDemo:old.isDemo}) : currentEvent === 'expert' ? expertLotteryMarkup(state,now,{pool:selectedPool}) : currentEvent === 'card-past' ? cardLotteryMarkup(old.state,legacyNow(),ticketStatus,{isDemo:old.isDemo}) : activityChoiceMarkup(state,now);
+  $('ac-content').innerHTML = route === 'prizes' ? unifiedPrizesMarkup(state,old.state,now,{legacyNow:legacyNow(),isDemo:old.isDemo}) : currentEvent === 'expert' ? expertLotteryMarkup(state,now,{pool:selectedPool,ticketStatus}) : currentEvent === 'card-past' ? cardLotteryMarkup(old.state,legacyNow(),ticketStatus,{isDemo:old.isDemo}) : activityChoiceMarkup(state,now);
   ui.focusProgress($('ac-content'));
 }
 
@@ -210,7 +210,7 @@ function cardPhoto(prize,small=false){
 
 function stopInlineDraw(){machineController?.destroy();machineController=null;drawing=false;}
 function showDrawResult(batch){
- const dialog=ui.showEventDialog('扭蛋结果',ui.resultMarkup(batch),{className:'ev-center-result'});
+ const dialog=ui.showEventDialog('扭蛋结果',ui.resultMarkup(batch),{className:'ev-center-result ev-result-dialog',celebration:batch.rewards.some(r=>r.type==='physical')?'physical':batch.rewards.some(r=>r.type==='voucher')?'voucher':'none'});
  dialog.querySelector('[data-result-prizes]').onclick=()=>{dialog.close('navigate');navigate('prizes');};
  dialog.querySelector('[data-result-expert]').onclick=()=>{dialog.close('navigate');ui.goExpert();};
  dialog.querySelector('[data-result-again]').onclick=()=>{dialog.close('repeat');startInlineDraw(batch.rewards.length);};

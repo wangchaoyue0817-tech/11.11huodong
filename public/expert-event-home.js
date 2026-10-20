@@ -10,14 +10,15 @@ const section=document.createElement('section');section.id='expertEvent';section
 $('expertHome').append(section);
 
 function renderHome(){
- const s=loadEvent(),now=eventNow(),balance=balances(s,now),enabled=active(now);
+ const now=eventNow(),enabled=active(now);
  homeMachine?.destroy();
  section.innerHTML=`<div class="eh-campaign">
- <div class="eh-campaign-copy"><h2>专鉴有礼</h2><p>${enabled?'每天免费扭一次':now<START?'10 月 27 日开启':'本期活动已结束'}</p>
- <button class="eh-enter-button" data-eh="hub"><span>${enabled?(balance.daily?'免费扭一次':'去扭蛋'):'查看活动'}</span>${icon()}</button>
- <div class="eh-campaign-links"><button class="eh-rank-pill" data-eh="ranking">${icon('crown')}王者榜 ${icon()}</button><button class="eh-rule-button" data-eh="rules">规则 ${icon()}</button></div></div>
- <button class="eh-machine-display" data-eh="hub" aria-label="打开扭蛋机，选择抽奖券"><div class="eh-machine">${machineMarkup({pool:'advanced',compact:true})}</div></button>
- </div><div class="eh-footer"><span>交互演示</span><button data-eh="demo">${icon('spark')}模拟场景</button></div>`;
+ <div class="eh-campaign-copy"><h2><span>专鉴有礼·</span><strong>替你的双11 <em>战利品兜底</em></strong></h2></div>
+ <div class="eh-machine-stage">
+ <button class="eh-rank-pill" data-eh="ranking"><span class="eh-rank-emblem" aria-hidden="true">${icon('crown')}</span><span>王者榜</span>${icon()}</button>
+ <button class="eh-machine-display" data-eh="hub" aria-label="打开扭蛋机，选择抽奖券"><div class="eh-machine">${machineMarkup({pool:'advanced'})}</div></button>
+ <button class="eh-enter-button" data-eh="hub"><span>${enabled?'去扭蛋':'查看活动'}</span>${icon()}</button>
+ </div></div><div class="eh-footer"><button class="eh-rule-button" data-eh="rules">活动规则 ${icon()}</button>${enabled?'':`<span class="eh-event-status">${now<START?'10 月 27 日开启':'本期活动已结束'}</span>`}<button data-eh="demo">${icon('spark')}模拟场景</button></div>`;
  homeMachine=mountMachine(section.querySelector('.gm-machine'));
  section.querySelectorAll('[data-eh]').forEach(b=>b.onclick=()=>{
   const a=b.dataset.eh;if(a==='rules')openRules();if(a==='ranking')openLeaderboard();
@@ -32,7 +33,7 @@ function enterEvent({scroll=false}={}){
  const now=eventNow(),guide=r.state.tickets.find(ticket=>ticket.firstGuide&&ticket.remaining>0&&ticket.at<=now&&ticket.expiresAt>now);
  if(active(now)&&guide&&r.state.guideShownTicketId!==guide.id){
   saveEvent({...r.state,guideShownTicketId:guide.id});
-  const d=showEventDialog('今天的好运，从这里开始',`<div class="eh-guide"><div class="eh-guide-ticket">${rewardArt('ordinary')}</div><span class="ev-eyebrow">每日免费礼遇</span><h2>送你一次免费扭蛋</h2><p>1 张普通抽奖券已到账<br>今日有效，先试试你的手气</p><button class="ev-primary" data-guide>免费扭一次 ${icon()}</button><button class="ev-text-button ev-full" data-later>稍后再用</button></div>`);
+  const d=showEventDialog('每日赠券',`<div class="eh-guide"><div class="eh-guide-ticket">${rewardArt('ordinary')}</div><h2>免费扭一次</h2><p>赠券今日有效</p><button class="ev-primary" data-guide>免费扭一次 ${icon()}</button><button class="ev-text-button ev-full" data-later>稍后再用</button></div>`);
   d.querySelector('[data-guide]').onclick=()=>{d.close();openDraw({pool:'ordinary',count:1});};d.querySelector('[data-later]').onclick=()=>d.close();
  }
 }

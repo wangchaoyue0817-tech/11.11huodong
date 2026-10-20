@@ -21,6 +21,9 @@ export class FixtureElement {
     this.tabIndex = /^(?:BUTTON|INPUT|TEXTAREA)$/.test(this.tagName) ? 0 : -1;
     this.scrollTop = this.scrollLeft = this.offsetLeft = 0;
     this.clientWidth = 375;
+    // This DOM fixture has no raster renderer, matching a browser that cannot
+    // allocate a 2D context. Canvas rendering itself is tested separately.
+    if (this.tagName === 'CANVAS') this.getContext = () => null;
   }
   get children() { return this.nodes.filter(node => typeof node !== 'string'); }
   get firstElementChild() { return this.children[0] || null; }
@@ -88,6 +91,12 @@ export class FixtureElement {
     }
   }
   replaceChildren(...nodes) { this.nodes = []; this.append(...nodes); }
+  remove() {
+    if (this.parentElement) {
+      this.parentElement.nodes = this.parentElement.nodes.filter(node => node !== this);
+      this.parentElement = null;
+    }
+  }
   matches(selector) {
     return selector.split(',').some(part => {
       part = part.trim();

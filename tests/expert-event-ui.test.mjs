@@ -117,7 +117,7 @@ test('a no-prize single draw shows encouragement and directs the user to expert 
   assert.equal(document.querySelector('.ev-result-card').classList.contains('is-empty'),true);
   assert.equal(document.querySelector('.ev-result-card strong').textContent,'再接再厉');
   assert.equal(document.querySelectorAll('.is-physical').length,0);
-  assert.match(document.querySelector('[data-result-expert]').textContent,/免费，去专鉴/);
+  assert.match(document.querySelector('[data-result-expert]').textContent,/去专鉴/);
   assert.doesNotMatch(document.querySelector('.ev-result-heading').textContent,/好礼已抵达/);
 });
 
@@ -131,7 +131,7 @@ test('five draw results retain each blank result and distinguish the actual phys
       {id:'n2',type:'none'}
     ]
   }));
-  assert.equal(document.querySelector('h2').textContent,'好礼已抵达');
+  assert.equal(document.querySelector('h2').textContent,'恭喜，抽中实物好礼');
   const cards=document.querySelectorAll('.ev-result-card');
   assert.equal(cards.length,3);
   assert.equal(cards.filter(card=>card.classList.contains('is-empty')).length,2);
@@ -387,9 +387,9 @@ test('draw result prize entry explicitly selects the expert activity and the dra
   ]);
 });
 
-test('hub prize and record entries carry the currently selected pool instead of stale card context',t=>{
+test('the single hub prize entry carries the currently selected pool instead of stale card context',t=>{
   const {dialog,navigations}=dialogHarness(t,orders(20));
-  for(const [button,route] of [['data-hub-prizes','prizes'],['data-hub-center','prizes']]) {
+  for(const [button,route] of [['data-hub-prizes','prizes']]) {
     for(const pool of ['advanced','ordinary']) {
       openActivityHub({pool:pool==='advanced'?'ordinary':'advanced'});
       dialog().querySelector(`[data-hub-pool="${pool}"]`).click();
@@ -398,5 +398,39 @@ test('hub prize and record entries carry the currently selected pool instead of 
       assert.deepEqual(navigations.at(-1),[route,{event:'expert',pool}]);
     }
   }
-  assert.equal(navigations.length,4);
+  assert.equal(navigations.length,2);
+});
+
+test('submitted rewards select distinct celebration tiers and close removes the decoration',t=>{
+  const {dialog,document}=dialogHarness(t,orders(20));
+  t.mock.timers.enable({apis:['setTimeout']});
+  globalThis.matchMedia=()=>({matches:false});
+  for(const pool of ['ordinary','advanced']) {
+    openProgress({reward:{pool}});
+    assert.equal(dialog().querySelector('.gacha-celebration').dataset.tier,pool);
+    assert.equal(dialog().querySelectorAll('.ev-reward-emblem img').length,1);
+    assert.equal(dialog().querySelectorAll('.ev-reward-count').length,0);
+    dialog().querySelector('[data-ev-close]').click();
+    assert.equal(document.querySelector('.gacha-celebration'),null);
+  }
+  openProgress();
+  assert.equal(dialog().querySelector('.gacha-celebration'),null);
+  assert.equal(dialog().querySelector('.ev-reward-emblem'),null);
+  assert.equal(dialog().querySelector('h2').textContent,'提交成功');
+});
+
+test('results use the strongest actual prize tier and make the appropriate next action primary',()=>{
+  for(const [type,title] of [['none','再接再厉'],['voucher','获得专家线上鉴别券'],['physical','恭喜，抽中实物好礼']]) {
+    const document=view(resultMarkup({pool:'ordinary',rewards:[{type,prizeId:'ysl-cushion',expiresAt:VOUCHER_END}]}));
+    assert.equal(document.querySelector('.ev-result').dataset.resultTier,type);
+    assert.equal(document.querySelector('h2').textContent,title);
+    assert.equal(document.querySelectorAll('.ev-primary').length,1);
+    assert.equal(document.querySelector(type==='none'?'[data-result-expert]':'[data-result-prizes]').classList.contains('ev-primary'),true);
+    assert.equal(document.querySelector('.ev-result-rule'),null);
+    assert.equal(document.querySelectorAll('.ev-result-saved').length,type==='none'?0:1);
+  }
+  const hub=view(activityHubMarkup(orders(14),T));
+  assert.equal(hub.querySelectorAll('[data-hub-prizes]').length,1);
+  assert.equal(hub.querySelector('[data-hub-center]'),null);
+  assert.equal(hub.querySelector('.ev-hub-intro'),null);
 });

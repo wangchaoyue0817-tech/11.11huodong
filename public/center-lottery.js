@@ -2,6 +2,7 @@ import {START,END,active,balances} from './expert-event-model.js';
 import {ticketPanel} from './center-pages.js';
 import {machineMarkup} from './capsule-machine.js';
 import {progressMarkup,rewardArt,icon} from './expert-event-ui.js';
+import {eventTicketPanelMarkup} from './event-ticket-list.js';
 
 export function activityChoiceMarkup(state,now){
  const balance=balances(state,now);
@@ -11,7 +12,7 @@ export function activityChoiceMarkup(state,now){
  </section>`;
 }
 
-export function expertLotteryMarkup(state,now,{pool='ordinary',drawing=false}={}){
+export function expertLotteryMarkup(state,now,{pool='ordinary',drawing=false,ticketStatus='unused'}={}){
  const balance=balances(state,now),enabled=active(now),premium=pool==='advanced';
  return `<section class="ac-gacha-page" aria-label="双11扭蛋活动">
  <div class="ac-activity-heading"><button class="ac-back-activities" data-action="choose-activity" aria-label="返回活动选择">${icon('back')}<strong>双11扭蛋</strong></button><div><button data-action="ranking">王者榜</button><button data-action="ticket-details">明细</button><button data-action="expert-rules">规则</button></div></div>
@@ -20,6 +21,7 @@ export function expertLotteryMarkup(state,now,{pool='ordinary',drawing=false}={}
  <div class="ac-draw-actions"><button class="cl-secondary" data-action="draw:1" ${drawing||!enabled||balance[pool]<1?'disabled':''}><strong>${!premium&&balance.daily?'免费扭一次':'扭一次'}</strong><small>使用 1 张${premium?'高级':'普通'}券</small></button><button class="cl-primary ${premium?'is-premium':''}" data-action="draw:5" ${drawing||!enabled||balance[pool]<5?'disabled':''}><strong>五连扭蛋</strong><small>使用 5 张同种券</small></button></div>
  <p class="ac-expiry-note" role="status">${!enabled?(now<START?'10月27日开启，敬请期待':'活动已结束，奖品与记录保留'):balance.daily&&!premium?'每日赠券当天有效，优先使用':balance[pool]<1?'暂无可用券，完成专鉴即可得券':'鉴定所得抽奖券，活动结束时失效'}</p>
  <div class="ac-inline-progress">${progressMarkup(state,{compact:true})}<button class="ac-progress-expert" data-action="go-expert">去专鉴 ${icon()}</button></div>
+ ${eventTicketPanelMarkup(state,now,ticketStatus)}
  </section>`;
 }
 
