@@ -27,3 +27,20 @@ test('campaign tokens stay scoped away from ordinary product surfaces', () => {
   for (const color of ['#315bff', '#853bff', '#f03ddb', '#48e8ff', '#ffd36b'])
     assert.ok(block.toLowerCase().includes(color), `missing campaign color ${color}`);
 });
+test('all maintained design references are reachable from the skill entrypoint', () => {
+  const visited = new Set();
+  const pending = [resolve(root, 'SKILL.md')];
+  while (pending.length) {
+    const file = pending.pop();
+    if (visited.has(file)) continue;
+    visited.add(file);
+    const text = readFileSync(file, 'utf8');
+    for (const match of text.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
+      if (/^(https?:|#|\/)/.test(match[1])) continue;
+      const target = resolve(dirname(file), match[1].split('#')[0]);
+      if (target.endsWith('.md') && !visited.has(target)) pending.push(target);
+    }
+  }
+  for (const file of markdownFiles(root))
+    assert(visited.has(file), `unreachable guidance: ${file}`);
+});

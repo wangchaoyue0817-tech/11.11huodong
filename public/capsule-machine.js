@@ -40,26 +40,23 @@ export function prizeArt(id, {className = ''} = {}) {
 }
 
 const BALLS = [
-  {x: 7, y: 8, size: 24, turn: -18, color: 'lilac'},
-  {x: 37, y: 3, size: 25, turn: 12, color: 'cyan'},
-  {x: 65, y: 7, size: 25, turn: 23, color: 'blue'},
-  {x: 0, y: 49, size: 25, turn: -30, color: 'blue'},
-  {x: 24, y: 42, size: 26, turn: -8, color: 'violet'},
-  {x: 50, y: 48, size: 24, turn: 22, color: 'lilac'},
-  {x: 75, y: 46, size: 24, turn: 15, color: 'cyan'},
-  {x: 45, y: 28, size: 24, turn: -18, color: 'gold'},
-  {x: 87, y: 5, size: 11, turn: 26, color: 'violet'},
-  {x: 0, y: 3, size: 12, turn: -7, color: 'gold'},
-  {x: 21, y: 3, size: 12, turn: 36, color: 'blue'},
+  {x: 9, y: 10, size: 25, turn: -16, color: 'violet'},
+  {x: 38, y: 4, size: 26, turn: 13, color: 'blue'},
+  {x: 68, y: 10, size: 25, turn: 23, color: 'lilac'},
+  {x: 20, y: 43, size: 26, turn: -22, color: 'cyan'},
+  {x: 49, y: 44, size: 26, turn: -9, color: 'violet'},
+  {x: 0, y: 51, size: 21, turn: 18, color: 'mint'},
+  {x: 78, y: 52, size: 20, turn: -15, color: 'gold'},
+  {x: 88, y: 3, size: 11, turn: 26, color: 'blue'},
 ];
 const POOL_ART = {
   ordinary: {
     showcase: ['makeup', 'skincare', 'perfume', 'voucher'],
-    balls: ['makeup', 'voucher', 'skincare', 'perfume', 'makeup', 'skincare', 'perfume', 'voucher'],
+    balls: ['makeup', 'voucher', 'skincare', 'perfume', 'voucher'],
   },
   premium: {
     showcase: ['ysl', 'c-belt', 'razer', 'c-wallet'],
-    balls: ['c-wallet', 'voucher', 'ysl', 'razer', 'c-belt', 'ysl', 'c-wallet', 'voucher'],
+    balls: ['c-wallet', 'voucher', 'ysl', 'razer', 'c-belt'],
   },
 };
 const poolTier = pool => ['premium', 'advanced'].includes(pool) ? 'premium' : 'ordinary';
@@ -68,7 +65,7 @@ const ballsMarkup = tier => BALLS.map((ball, index) => ballMarkup({...ball, art:
 
 function ballMarkup(ball, index) {
   return `<div class="gm-ball gm-ball--${ball.color}${ball.art ? ' gm-ball--prize' : ''}" style="--gm-x:${ball.x}%;--gm-y:${ball.y}%;--gm-size:${ball.size}%;--gm-turn:${ball.turn}deg;--gm-delay:-${index * .81}s;--gm-drift:${6.3 + index * .31}s;--gm-i:${index}" aria-hidden="true">
-    <div class="gm-ball-shell"><span class="gm-ball-back"></span>${ball.art ? prizeArt(ball.art) : '<span class="gm-ball-star">✦</span>'}<span class="gm-ball-bottom"></span><span class="gm-ball-seam"></span><span class="gm-ball-glint"></span></div>
+    <div class="gm-ball-shell"><span class="gm-ball-back"></span>${ball.art ? prizeArt(ball.art) : '<span class="gm-ball-core"></span>'}<span class="gm-ball-bottom"></span><span class="gm-ball-seam"></span><span class="gm-ball-glint"></span></div>
   </div>`;
 }
 
@@ -78,17 +75,15 @@ export function machineMarkup({pool = 'ordinary', compact = false} = {}) {
     <div class="gm-aura" aria-hidden="true"></div>
     <div class="gm-floor" aria-hidden="true"></div>
     <div class="gm-device">
-      <img class="gm-body-art" src="assets/gacha/machine-body-v2.png" alt="" aria-hidden="true" draggable="false" decoding="async">
+      <img class="gm-body-art" src="assets/gacha/machine-body-v3.png" alt="" aria-hidden="true" draggable="false" decoding="async">
       <div class="gm-chamber" aria-hidden="true">
-        <div class="gm-chamber-back"><span class="gm-back-orbit"></span><span class="gm-back-spark gm-back-spark--a"></span><span class="gm-back-spark gm-back-spark--b"></span></div>
         <div class="gm-balls">${ballsMarkup(tier)}</div>
         <div class="gm-glass"></div><div class="gm-chamber-floor"></div>
       </div>
-      <div class="gm-marquee"><span class="gm-marquee-spark"></span><strong class="gm-pool-title">${tier === 'premium' ? '高级好礼' : '扭出惊喜'}</strong><span class="gm-marquee-spark"></span></div>
+      <div class="gm-marquee"><strong class="gm-pool-title">${tier === 'premium' ? '高级好礼' : '扭出惊喜'}</strong></div>
       <div class="gm-showcase" aria-hidden="true">${showcaseMarkup(tier)}</div>
       <div class="gm-dial" aria-hidden="true"><span class="gm-dial-ring"></span><span class="gm-dial-handle"></span><span class="gm-dial-center"></span></div>
       <div class="gm-delivery" aria-hidden="true"><span class="gm-door"></span><span class="gm-delivery-light"></span><div class="gm-dispensed">${Array.from({length: 5}, (_, i) => `<span class="gm-drop-ball gm-drop-ball--${i}" style="--gm-drop-i:${i}"><i></i></span>`).join('')}</div></div>
-      <div class="gm-running-light" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     </div>
     <span class="gm-live" role="status" aria-live="polite"></span>
   </div>`;

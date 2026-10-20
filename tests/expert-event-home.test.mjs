@@ -10,13 +10,29 @@ import {DEMO_SCENE_GROUPS,buildDemoScene} from '../public/expert-event-demo.js';
 
 const source=readFileSync(new URL('../public/expert-event-home.js',import.meta.url),'utf8');
 const T=model.START+10*3600000;
-test('retired expert introduction is removed from the shipped DOM and its dedicated styles',()=>{
+test('expert home restores the complete original service hero and one working category entry',()=>{
   const html=readFileSync(new URL('../public/home.html',import.meta.url),'utf8');
   const css=readFileSync(new URL('../public/expert-refinement.css',import.meta.url),'utf8');
-  assert.doesNotMatch(html,/expert-welcome|expert-hero-main|expert-spectrum|真伪图库|份专家报告/);
-  assert.doesNotMatch(css,/expert-welcome|expert-hero-main|expert-spectrum/);
+  const homeCss=readFileSync(new URL('../public/expert-event-home.css',import.meta.url),'utf8');
   const document=createDocument(html);
+  const hero=document.querySelector('.expert-welcome');
+  assert.ok(hero,'full service introduction is present above the activity');
+  assert.match(hero.textContent,/线上人工鉴别/);
+  assert.match(hero.textContent,/资深专家线上鉴别/);
+  assert.match(hero.textContent,/出具权威鉴别结论/);
+  assert.match(hero.textContent,/错一赔三，专家一对一鉴别/);
+  assert.match(hero.textContent,/最快 30 分钟出具结论/);
+  assert.equal(hero.querySelectorAll('.expert-welcome-tags span').length,3);
+  assert.equal(hero.querySelector('.expert-welcome-stats').children.length,3);
+  assert.match(hero.textContent,/真伪图库/);
+  assert.match(hero.textContent,/分钟出结果/);
+  assert.match(hero.textContent,/份专家报告/);
+  assert.match(hero.querySelector('.expert-spectrum').textContent,/EXPERT/);
+  assert.match(css,/#expertHome \.expert-welcome-title\{/);
+  assert.doesNotMatch(html,/eh-service/);
+  assert.doesNotMatch(homeCss,/\.eh-service/,'compact header styles no longer override the restored hero');
   assert.equal(document.querySelectorAll('#expertCta').length,1,'existing category picker keeps one entry');
+  assert.equal(hero.querySelector('#expertCta').textContent.replace(/\s+/g,''),'＋立即鉴别');
 });
 // The real controller uses remove() when switching between upload and report.
 if(!FixtureElement.prototype.remove)FixtureElement.prototype.remove=function(){

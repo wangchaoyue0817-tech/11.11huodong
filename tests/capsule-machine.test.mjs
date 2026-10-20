@@ -172,7 +172,7 @@ test('machine markup carries no business actions and includes decorative balls a
   const html = machineMarkup({pool: 'premium', compact: true});
   assert.match(html, /gm-machine--compact/);
   assert.match(html, /data-pool="premium"/);
-  assert.equal((html.match(/class="gm-ball gm-ball--/g) || []).length, 11);
+  assert.equal((html.match(/class="gm-ball gm-ball--/g) || []).length, 8);
   assert.equal((html.match(/class="gm-drop-ball gm-drop-ball--/g) || []).length, 5);
   assert.match(html, /aria-live="polite"/);
   assert.doesNotMatch(html, /<button|onclick=|localStorage|<script/);
@@ -190,9 +190,9 @@ test('ordinary machine presents only sample prizes and vouchers, while advanced 
       assert.match(advanced, new RegExp(`assets/gacha/${id}\\.svg`));
     }
     assert.doesNotMatch(advanced, /assets\/gacha\/(?:makeup|skincare|perfume)\.svg/);
-    assert.equal((advanced.match(/class="gm-ball-star"/g) || []).length, 3);
+    assert.equal((advanced.match(/class="gm-ball-core"/g) || []).length, 3);
   }
-  assert.equal((ordinary.match(/class="gm-ball-star"/g) || []).length, 3);
+  assert.equal((ordinary.match(/class="gm-ball-core"/g) || []).length, 3);
 });
 
 test('playing a different pool refreshes the prize showcase and capsule contents', t => {
@@ -218,22 +218,57 @@ test('machine has no global business state and CSS stops movement for reduced mo
   assert.match(css, /gm-tumble-five/);
 });
 
-test('wide v2 cabinet keeps its moving glass capsules separate from the static body art', async () => {
+test('modern v3 cabinet keeps its moving glass capsules separate from the static body art', async () => {
   const html = machineMarkup({compact: true});
   const css = await readFile(new URL('../public/capsule-machine.css', import.meta.url), 'utf8');
-  const png = await readFile(new URL('../public/assets/gacha/machine-body-v2.png', import.meta.url));
+  const png = await readFile(new URL('../public/assets/gacha/machine-body-v3.png', import.meta.url));
   assert.equal(png.subarray(1, 4).toString(), 'PNG');
   assert.ok([4, 6].includes(png[25]), 'cabinet silhouette must have an alpha channel');
   const ratio = png.readUInt32BE(16) / png.readUInt32BE(20);
   assert.ok(ratio > 1.2 && ratio < 1.3, 'body asset matches the wide 5:4 visual canvas');
-  assert.match(html, /class="gm-body-art" src="assets\/gacha\/machine-body-v2\.png"/);
+  assert.match(html, /class="gm-body-art" src="assets\/gacha\/machine-body-v3\.png"/);
   assert.match(html, /class="gm-chamber"/);
   assert.match(html, /class="gm-balls"/);
   assert.match(html, /class="gm-dial"/);
   assert.match(html, /class="gm-delivery"/);
-  assert.doesNotMatch(html, /gm-crown|gm-device-label/);
+  assert.doesNotMatch(html, /gm-crown|gm-device-label|gm-back-orbit|gm-running-light|machine-body-v2/);
   assert.match(css, /aspect-ratio:\s*5\s*\/\s*4/);
   assert.match(css, /#315bff/i);
   assert.match(css, /#853bff/i);
   assert.match(css, /#f03ddb/i);
+});
+
+test('v3 capsules fit the transparent chamber and leave room for soft movement', async () => {
+  const html = machineMarkup({pool: 'advanced'});
+  const css = await readFile(new URL('../public/capsule-machine.css', import.meta.url), 'utf8');
+  const chamber = css.match(/\.gm-chamber \{[^}]+left:([\d.]+)%; right:([\d.]+)%; top:([\d.]+)%; height:([\d.]+)%/);
+  assert.ok(chamber, 'cabinet coordinates remain proportional at every viewport width');
+  const [, left, right, top, height] = chamber.map(Number);
+  assert.ok(left >= 13 && right >= 13 && top >= 16 && top + height <= 63,
+    'moving capsules stay inside the generated blue glass, clear of cabinet edges');
+  const chamberAspect = (100 - left - right) * 1.25 / height;
+  const positions = [...html.matchAll(/--gm-x:([\d.]+)%;--gm-y:([\d.]+)%;--gm-size:([\d.]+)%/g)];
+  assert.equal(positions.length, 8);
+  for (const [, x, y, size] of positions.map(values => values.map(Number))) {
+    assert.ok(x >= 0 && x + size <= 100, 'capsule width fits the chamber');
+    assert.ok(y >= 0 && y + size * chamberAspect <= 99,
+      'capsule does not fall below the glass floor at rest');
+  }
+  assert.equal((html.match(/gm-ball--prize"/g) || []).length, 5);
+  assert.match(css, /\.gm-ball--mint/);
+});
+
+test('the rotating knob crop aligns with the original cabinet at every size', async () => {
+  const css = await readFile(new URL('../public/capsule-machine.css', import.meta.url), 'utf8');
+  const dial = css.match(/\.gm-dial \{[^}]+left:([\d.]+)%; top:([\d.]+)%; width:([\d.]+)%; height:([\d.]+)%/);
+  const crop = css.match(/\.gm-dial-ring \{[^}]+background-size:([\d.]+)% ([\d.]+)%; background-position:([\d.]+)% ([\d.]+)%/);
+  assert.ok(dial && crop);
+  const [, left, top, width, height] = dial.map(Number);
+  const [, scaleX, scaleY, offsetX, offsetY] = crop.map(Number);
+  for (const [actual, expected] of [
+    [scaleX, 10000 / width], [scaleY, 10000 / height],
+    [offsetX, left * 100 / (100 - width)], [offsetY, top * 100 / (100 - height)],
+  ]) assert.ok(Math.abs(actual - expected) < .002, 'crop remains aligned with its static background');
+  assert.match(css, /gm-knob-one 1\.65s/);
+  assert.match(css, /animation-name:gm-knob-five; animation-duration:2\.95s/);
 });

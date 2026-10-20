@@ -149,20 +149,40 @@ export function rankingState(state){
  }
  return {...state,orders:[...demoRankOrders,...state.orders],users:[...demoRankOrders.names,{uid:state.uid,username:'我'}]};
 }
-export function openLeaderboard(initial='true',{onReturn}={}){
- let kind=initial;const d=showEventDialog('专鉴荣誉榜','',{className:'ev-ranking-dialog',onClose:({reason})=>{if(reason==='dismiss')onReturn?.();}});
- const render=()=>{
- const s=loadEvent(),ranked=rankingState(s),rows=leaderboard(ranked,kind),me=rows.find(r=>r.uid===s.uid),top=rows.slice(0,3),names=ranked.users||[];
- const name=r=>r?.uid===s.uid?'我':names.find(u=>u.uid===r?.uid)?.username||'鉴**友';
- d.querySelector('.ev-dialog-body').innerHTML=`<div class="ev-ranking-intro"><span class="ev-eyebrow">每一份判断，都值得被看见</span><h2>让专业，成为你的荣誉</h2><p>10.27 — 11.10 · 活动结束统一结算</p></div>
- <div class="ev-segment"><button data-kind="true" aria-selected="${kind==='true'}">鉴真王者</button><button data-kind="false" aria-selected="${kind==='false'}">避雷王者</button></div>
- <div class="ev-rank-benefit">${icon('crown')}<span>前三名每人获得 <b>${kind==='true'?'200 元现金红包':'终身免费专鉴'}</b><small>同时获得「${kind==='true'?'鉴真王者':'避雷王者'}」专属称号</small></span></div>
- <div class="ev-podium">${[1,0,2].map(index=>{const r=top[index];return `<div class="ev-podium-person place-${index+1}"><div class="ev-avatar">${index===0?icon('crown'):icon('shield')}</div><strong>${name(r)}</strong><span>${r?.count||0} 单</span><div class="ev-podium-base"><b>0${index+1}</b></div></div>`;}).join('')}</div>
+export function maskedRankName(value){
+ const text=String(value||'鉴友').trim();
+ if(/^[^\s*]\*{2,}[^\s*]?$/u.test(text))return text;
+ const chars=Array.from(text);
+ return chars.length>1?`${chars[0]}**${chars.at(-1)}`:`${chars[0]||'鉴'}**`;
+}
+export function leaderboardMarkup(state,kind='true'){
+ const rows=leaderboard(state,kind),me=rows.find(row=>row.uid===state.uid),top=rows.slice(0,3);
+ const name=row=>row.uid===state.uid?'我':maskedRankName(state.users?.find(user=>user.uid===row.uid)?.username);
+ const avatar=(row,className='')=>`<span class="ev-rank-avatar ${className}" data-tone="${row.rank%4}" aria-hidden="true"><span>${escapeHtml(Array.from(name(row))[0])}</span></span>`;
+ return `<div class="ev-ranking-top"><button class="ev-rank-rules-button" data-rules>规则</button>
+ <div class="ev-ranking-tabs" role="tablist" aria-label="选择排行榜">${['true','false'].map(value=>`<button role="tab" data-kind="${value}" aria-selected="${kind===value}"><span>${value==='true'?'鉴真王者':'避雷王者'}</span></button>`).join('')}</div>
+ <div class="ev-rank-reward"><span>前三名每人</span><strong>${kind==='true'?'<b>200</b> 元红包':'终身免费专鉴'}</strong><span>＋专属称号</span></div></div>
+ <div class="ev-ranking-scroll" tabindex="0" aria-label="排行榜名单">
+ <div class="ev-podium" aria-label="前三名领奖台"><img class="ev-podium-art" src="assets/gacha/leaderboard-podium-v3.png" alt="" aria-hidden="true" draggable="false">
+ ${[1,0,2].map(index=>{const row=top[index],rank=index+1;return `<article class="ev-podium-person place-${rank} ${row?'':'is-vacant'}" data-rank="${rank}" aria-label="第 ${rank} 名${row?`，${escapeHtml(name(row))}，${row.count} 单`:'，虚位以待'}">
+ ${row?avatar(row,'ev-podium-avatar'):'<span class="ev-podium-avatar ev-vacant-avatar" aria-hidden="true">?</span>'}
+ <span class="ev-podium-rank" aria-hidden="true">${String(rank).padStart(2,'0')}</span>
+ <div class="ev-podium-info"><strong>${row?escapeHtml(name(row)):'虚位以待'}</strong>${row?`<span class="ev-podium-count"><b>${row.count}</b><small> 单</small></span>`:'<span class="ev-vacant-note">期待你的加入</span>'}</div></article>`;}).join('')}
+ </div>
  <div class="ev-rank-table-head"><span>排名 / 用户</span><span>${kind==='true'?'鉴真':'鉴假'}单数</span></div>
- <div class="ev-rank-list">${rows.slice(3,100).map(r=>`<div class="ev-rank-row"><b>${String(r.rank).padStart(2,'0')}</b><span class="ev-rank-avatar">${icon('shield')}</span><span>${name(r)}</span><strong>${r.count}<small> 单</small></strong></div>`).join('')}</div>
- <div class="ev-my-rank"><span><small>我的排名</small><b>${me?`第 ${me.rank} 名`:'暂未上榜'}</b></span><span><b>${me?.count||0}</b> 单${kind==='true'?'鉴真':'鉴假'}</span><button data-rank-expert>去专鉴 ${icon()}</button></div>
- <button class="ev-text-button ev-full" data-rules>查看榜单规则与奖励 ${icon()}</button><p class="ev-demo-note">榜单含演示用户；本人的排名随模拟专家结果更新。</p>`;
- d.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{kind=b.dataset.kind;render();});
+ <div class="ev-rank-list">${rows.slice(3,100).map(row=>`<article class="ev-rank-row ${row.uid===state.uid?'is-me':''}" data-rank="${row.rank}"><b class="ev-rank-number">${String(row.rank).padStart(2,'0')}</b>${avatar(row)}<span class="ev-rank-username">${escapeHtml(name(row))}</span><strong>${row.count}<small> 单</small></strong></article>`).join('')}</div>
+ ${rows.length<4?`<p class="ev-rank-empty">${rows.length?'更多席位，等你来争取':'完成专鉴，争取你的榜上席位'}</p>`:''}
+ <p class="ev-rank-note">按专家最终结论计数 · 当前为演示数据</p></div>
+ <aside class="ev-my-rank"><span class="ev-my-rank-position"><small>我的排名</small><b>${me?`第 ${me.rank} 名`:'暂未上榜'}</b></span><span class="ev-my-rank-score"><b>${me?.count||0}</b><small> 单${kind==='true'?'鉴真':'鉴假'}</small></span><button data-rank-expert>去专鉴 ${icon()}</button></aside>`;
+}
+export function openLeaderboard(initial='true',{onReturn}={}){
+ let kind=initial==='false'?'false':'true';const d=showEventDialog('专鉴王者榜','',{className:'ev-ranking-dialog',onClose:({reason})=>{if(reason==='dismiss')onReturn?.();}});
+ const render=()=>{
+ d.querySelector('.ev-dialog-body').innerHTML=leaderboardMarkup(rankingState(loadEvent()),kind);
+ d.querySelectorAll('[data-kind]').forEach(button=>{
+  button.onclick=()=>{kind=button.dataset.kind;render();d.querySelector(`[data-kind="${kind}"]`).focus?.({preventScroll:true});};
+  button.addEventListener('keydown',event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();kind=event.key==='Home'?'true':event.key==='End'?'false':kind==='true'?'false':'true';render();d.querySelector(`[data-kind="${kind}"]`).focus?.({preventScroll:true});}});
+ });
  d.querySelector('[data-rank-expert]').onclick=()=>{d.close('navigate');goExpert();};
  d.querySelector('[data-rules]').onclick=()=>{d.close('rules');openRules({onReturn:()=>openLeaderboard(kind,{onReturn})});};
  };

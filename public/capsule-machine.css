@@ -1,8 +1,8 @@
-/* 图灵鉴X activity machine v2: compact pearl-metal cabinet, clear moving capsules.
+/* 图灵鉴X activity machine v3: smooth porcelain cabinet and clear blue glass.
    The generated cabinet is one visual layer. Balls, glass, crank and hatch stay live. */
 .gm-machine {
   --gm-violet:#853bff; --gm-blue:#315bff; --gm-rose:#f03ddb;
-  --gm-accent:#48e8ff; --gm-highlight:#effaff;
+  --gm-accent:#47ceff; --gm-highlight:#effaff;
   position:relative; isolation:isolate; width:100%; max-width:360px;
   aspect-ratio:5 / 4; margin:0 auto; color:#f6f0ff;
   font-family:var(--jx-font,"PingFang SC",sans-serif); contain:layout style;
@@ -14,75 +14,72 @@
 .gm-prize-art > img { display:block; width:100%; height:100%; object-fit:contain; }
 .gm-prize-art--sprite-ready { background-image:url("assets/gacha/prizes-sheet.png"); background-size:400% 200%; background-position:var(--gm-sprite-x) var(--gm-sprite-y); background-repeat:no-repeat; }
 .gm-prize-art--sprite-ready > img { visibility:hidden; }
-.gm-aura { position:absolute; inset:7% 2% 3%; z-index:-2; background:radial-gradient(ellipse at 37% 50%,#315bff20,transparent 57%),radial-gradient(ellipse at 74% 58%,#f03ddb1c,transparent 50%); }
-.gm-floor { position:absolute; left:7%; right:7%; bottom:0; height:12%; border-radius:50%; background:radial-gradient(ellipse,#4e2eaf80 0,#3c2a734d 48%,transparent 72%); filter:blur(3px); }
+.gm-aura { position:absolute; inset:8% 4% 4%; z-index:-2; background:radial-gradient(ellipse at 50% 50%,#72d7ff14,transparent 68%); }
+.gm-floor { position:absolute; left:12%; right:12%; bottom:-1%; height:6%; border-radius:50%; background:radial-gradient(ellipse,#3862bc50 0,#3373b426 48%,transparent 72%); filter:blur(3px); }
 .gm-device { position:absolute; inset:0; }
 .gm-body-art { position:absolute; z-index:2; inset:0; display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none; }
 /* Coordinates refer to the complete, transparently padded cabinet asset. */
-.gm-chamber { position:absolute; z-index:3; left:17.3%; right:17.3%; top:24%; height:39.5%; border-radius:9% 9% 13% 13% / 19% 19% 14% 14%; overflow:hidden; background:linear-gradient(110deg,#74b8ff05,transparent 40%,#dbabff05); }
-.gm-chamber-back { position:absolute; inset:0; background:radial-gradient(ellipse at 45% 75%,#5444e24d,transparent 70%); }
-.gm-back-orbit { position:absolute; left:12%; right:12%; top:7%; bottom:2%; border:1px solid #8fd9ff29; border-radius:50%; transform:rotate(-18deg); }
-.gm-back-spark { position:absolute; width:3px; height:3px; border-radius:50%; background:#a7f4ff; box-shadow:0 0 8px #48e8ff; }
-.gm-back-spark--a { left:5%; top:29%; }.gm-back-spark--b { right:7%; top:11%; background:#ffd36b; }
-.gm-balls { position:absolute; inset:3% 4% 2%; perspective:500px; }
-.gm-ball { --gm-ball-color:#853bff; --gm-ball-mid:#ac6dff; --gm-ball-light:#efc8ff; position:absolute; left:var(--gm-x); top:var(--gm-y); width:var(--gm-size); aspect-ratio:1; animation:gm-float var(--gm-drift) ease-in-out var(--gm-delay) infinite; filter:drop-shadow(0 3px 3px #17276966); }
-.gm-ball--blue { --gm-ball-color:#315bff; --gm-ball-mid:#698cff; --gm-ball-light:#c1deff; }
-.gm-ball--cyan { --gm-ball-color:#139bdb; --gm-ball-mid:#48d6ff; --gm-ball-light:#c8fbff; }
-.gm-ball--lilac { --gm-ball-color:#d82ecd; --gm-ball-mid:#f17ce8; --gm-ball-light:#ffcefa; }
-.gm-ball--gold { --gm-ball-color:#d19728; --gm-ball-mid:#ffd36b; --gm-ball-light:#fff4c6; }
-.gm-ball-shell { position:relative; width:100%; height:100%; border-radius:50%; overflow:hidden; transform:rotate(var(--gm-turn)); border:1px solid color-mix(in srgb,var(--gm-ball-light) 90%,transparent); background:radial-gradient(circle at 31% 18%,#f3faffb3,#c2d7ff24 32%,#8d9edc21 53%,#dde3ff73 80%,#b8b8edb3); box-shadow:inset 2px 2px 3px #f5f7ffa6,inset -3px -4px 5px #4d46976b; }
-.gm-ball-back { position:absolute; inset:0; border-radius:50%; background:radial-gradient(ellipse at 45% 32%,#ffffff1a 20%,#939cdb24 61%,#edf0ffa1); }
-.gm-ball .gm-prize-art { position:absolute; z-index:1; width:78%; height:78%; left:11%; top:5%; transform:rotate(calc(var(--gm-turn) * -1)); filter:drop-shadow(0 2px 2px #25305e66); }
-.gm-ball-bottom { position:absolute; z-index:2; inset:59% -4% -2%; border-radius:0 0 60% 60%; background:radial-gradient(ellipse at 34% 4%,var(--gm-ball-light) 0,var(--gm-ball-mid) 25%,var(--gm-ball-color) 66%,#453483 100%); box-shadow:inset 2px 1px 3px #ffffff7a,inset 0 -3px 4px #35347366; }
-.gm-ball-seam { position:absolute; z-index:3; left:-5%; right:-5%; height:16%; top:51%; border-radius:50%; border-bottom:2px solid var(--gm-ball-light); border-top:1px solid #ffffff59; background:linear-gradient(transparent,#d6dbff33); box-shadow:0 1px 2px #433c9273; }
+.gm-chamber { position:absolute; z-index:3; left:15%; right:15%; top:19%; height:41.5%; border-radius:12% 12% 9% 9% / 25% 25% 16% 16%; overflow:hidden; }
+.gm-balls { position:absolute; inset:0; perspective:500px; }
+.gm-ball { --gm-ball-color:#853bff; --gm-ball-mid:#b17aff; --gm-ball-light:#eee0ff; position:absolute; left:var(--gm-x); top:var(--gm-y); width:var(--gm-size); aspect-ratio:1; animation:gm-float var(--gm-drift) ease-in-out var(--gm-delay) infinite; filter:drop-shadow(0 3px 2px #2278c330); }
+.gm-ball--blue { --gm-ball-color:#315bff; --gm-ball-mid:#6b97ff; --gm-ball-light:#d9eeff; }
+.gm-ball--cyan { --gm-ball-color:#119bdf; --gm-ball-mid:#5cdcff; --gm-ball-light:#d9fbff; }
+.gm-ball--lilac { --gm-ball-color:#e33dcc; --gm-ball-mid:#f999e7; --gm-ball-light:#ffe0f9; }
+.gm-ball--mint { --gm-ball-color:#22bd77; --gm-ball-mid:#78ec9b; --gm-ball-light:#e3ffb8; }
+.gm-ball--gold { --gm-ball-color:#efa915; --gm-ball-mid:#ffdc62; --gm-ball-light:#fff6c3; }
+.gm-ball-shell { position:relative; width:100%; height:100%; border-radius:50%; overflow:hidden; transform:rotate(var(--gm-turn)); border:1px solid #f3fcffc9; background:radial-gradient(circle at 31% 18%,#ffffffce,#d5f7ff30 34%,#d1eeff24 55%,#dff5ffb3 83%,#a8ddf3b3); box-shadow:inset 2px 2px 3px #ffffffb3,inset -2px -3px 4px #71b9de50; }
+.gm-ball-back { position:absolute; inset:0; border-radius:50%; background:radial-gradient(ellipse at 40% 26%,#ffffff1a 20%,#8ecbe81a 61%,#ecfbff9c); }
+.gm-ball .gm-prize-art { position:absolute; z-index:1; width:82%; height:82%; left:9%; top:1%; transform:rotate(calc(var(--gm-turn) * -1)); filter:drop-shadow(0 2px 2px #437a9650); }
+.gm-ball-bottom { position:absolute; z-index:2; inset:59% -4% -2%; border-radius:0 0 60% 60%; background:radial-gradient(ellipse at 34% 4%,var(--gm-ball-light) 0,var(--gm-ball-mid) 34%,var(--gm-ball-color) 87%); box-shadow:inset 2px 1px 3px #ffffffa8,inset 0 -3px 4px #175baa20; }
+.gm-ball-seam { position:absolute; z-index:3; left:-5%; right:-5%; height:16%; top:51%; border-radius:50%; border-bottom:2px solid var(--gm-ball-light); border-top:1px solid #ffffff70; background:linear-gradient(transparent,#f0fcff26); box-shadow:0 1px 2px #2278bd30; }
 .gm-ball-glint { position:absolute; z-index:4; left:10%; top:8%; width:34%; height:21%; background:linear-gradient(135deg,#ffffffed,#e8eaff07); border-radius:70% 20% 80% 20%; transform:rotate(-24deg); }
-.gm-ball-star { position:absolute; inset:18% 0 0; text-align:center; color:#f9f1ff; font-size:17px; text-shadow:0 0 6px var(--gm-ball-light); }
-.gm-glass { position:absolute; z-index:5; inset:0; border-radius:inherit; pointer-events:none; background:linear-gradient(106deg,#f0fbff24 2%,transparent 10%,transparent 17%,#ecfaff05 18%,#f8f4ff0d 24%,transparent 25%,transparent 84%,#c3edff24 95%,#e7eaff47); box-shadow:inset 0 3px 5px #e1deff1a,inset 0 -3px 5px #7971e14d; }
+.gm-ball-core { position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 32% 24%,var(--gm-ball-light),var(--gm-ball-mid) 40%,var(--gm-ball-color) 85%); }
+.gm-glass { position:absolute; z-index:5; inset:0; border-radius:inherit; pointer-events:none; background:linear-gradient(106deg,#f0fbff20 2%,transparent 10%,transparent 17%,#ecfaff05 18%,#f8fcff10 24%,transparent 25%,transparent 84%,#c3edff24 95%,#e7faff38); }
 .gm-glass::before { content:""; position:absolute; left:4%; top:13%; bottom:16%; width:1%; background:linear-gradient(transparent,#f4faffb3,transparent); border-radius:50%; }
-.gm-chamber-floor { position:absolute; bottom:-8%; height:18%; left:0; right:0; border-radius:50%; background:radial-gradient(ellipse,#97caff5c,#8068e329 50%,#d7c3ff4d); box-shadow:0 -1px 2px #e2f1ff40; }
-.gm-marquee { position:absolute; z-index:5; left:31%; right:31%; top:3%; height:7%; display:flex; align-items:center; justify-content:center; gap:8px; }
-.gm-pool-title { color:#fff4ff; font-size:clamp(13px,3.7vw,15px); font-weight:700; letter-spacing:1.5px; line-height:1; white-space:nowrap; text-shadow:0 1px 2px #4935a8,0 0 8px #ddcaff6b; }
-.gm-marquee-spark { width:3px; height:3px; flex-shrink:0; border-radius:50%; background:var(--gm-accent); box-shadow:0 0 6px var(--gm-accent); }
+.gm-chamber-floor { position:absolute; bottom:-10%; height:15%; left:5%; right:5%; border-radius:50%; background:radial-gradient(ellipse,#deffff52,#75bce91a 65%,transparent 75%); }
+.gm-marquee { position:absolute; z-index:5; left:34%; right:34%; top:3.2%; height:7%; display:flex; align-items:center; justify-content:center; }
+.gm-pool-title { color:#2459d8; font-size:clamp(13px,3.7vw,15px); font-weight:750; letter-spacing:1px; line-height:1; white-space:nowrap; text-shadow:0 1px 0 #fff9; }
 /* The prizes live in the glass chamber; no second row of tiny product icons. */
 .gm-showcase { display:none; }
-.gm-dial { position:absolute; z-index:5; left:60.9%; top:71.5%; width:20.2%; height:25.2%; border-radius:50%; pointer-events:none; }
-.gm-dial-ring { position:absolute; inset:0; border:1px solid #94eaff33; border-radius:50%; }
-.gm-dial-handle { position:absolute; inset:-2%; border-radius:50%; background:conic-gradient(from 20deg,transparent 78%,#48e8ff00 80%,#b4f8ff 95%,#fff 99%,transparent); mask:radial-gradient(circle,transparent 63%,#000 65%,#000 69%,transparent 71%); opacity:0; }
-.gm-dial-center { position:absolute; left:47%; top:47%; width:6%; aspect-ratio:1; border-radius:50%; background:var(--gm-highlight); box-shadow:0 0 5px #e4b8ff; opacity:0; }
-.gm-delivery { position:absolute; z-index:5; left:23%; top:75.5%; width:18.5%; height:17%; border-radius:35% 35% 25% 25% / 20%; overflow:hidden; }
+.gm-dial { position:absolute; z-index:5; left:59.2%; top:68.1%; width:18.4%; height:23%; border-radius:50%; pointer-events:none; }
+/* Reuse the exact circular knob crop so its blue handle really turns, with no
+   second illustration or mismatched light source over the generated cabinet. */
+.gm-dial-ring { position:absolute; inset:0; border-radius:50%; background-image:url("assets/gacha/machine-body-v3.png"); background-size:543.478% 434.783%; background-position:72.549% 88.442%; }
+.gm-dial-handle { position:absolute; inset:-3%; border-radius:50%; background:conic-gradient(from 20deg,transparent 73%,#61d7ff00 78%,#3c7cff 95%,#b4f8ff 99%,transparent); mask:radial-gradient(circle,transparent 63%,#000 65%,#000 69%,transparent 71%); opacity:0; }
+.gm-dial-center { position:absolute; left:47%; top:47%; width:6%; aspect-ratio:1; border-radius:50%; background:#e7f8ff; box-shadow:0 0 5px #59caff; opacity:0; }
+.gm-delivery { position:absolute; z-index:5; left:26.5%; top:70.2%; width:20%; height:18%; border-radius:20%; overflow:hidden; }
 .gm-door { display:none; }
 .gm-delivery-light { position:absolute; left:12%; right:12%; bottom:6%; height:2px; border-radius:50%; background:var(--gm-accent); box-shadow:0 -2px 10px var(--gm-accent); opacity:0; }
 .gm-dispensed { position:absolute; inset:0 2% 6%; display:flex; align-items:end; justify-content:center; gap:1%; }
-.gm-drop-ball { position:relative; flex:0 0 18%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 30% 20%,#f8f2ff,#c4c4ef 35%,#7976cc 75%,#e1cafa); border:1px solid #f0dcff; opacity:0; transform:translateY(-180%); box-shadow:0 2px 3px #28206080; overflow:hidden; }
+.gm-drop-ball { position:relative; flex:0 0 18%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 30% 20%,#fff,#dff5ff 35%,#a7dcf4 75%,#f0fcff); border:1px solid #e1faff; opacity:0; transform:translateY(-180%); box-shadow:0 2px 3px #145f9d50; overflow:hidden; }
 .gm-drop-ball i { position:absolute; inset:52% -2% -2%; border-radius:0 0 50% 50%; background:linear-gradient(140deg,#dfb4ff,#853bff 60%,#b1b9ff); border-top:1px solid #f3d4ff; }
 .gm-drop-ball--1 i { background:linear-gradient(140deg,#c2eaff,#315bff 70%,#b8bdff); }
 .gm-drop-ball--2 i { background:linear-gradient(140deg,#ffc2f4,#f03ddb 70%,#eeb5ff); }
 .gm-drop-ball--3 i { background:linear-gradient(140deg,#d1faff,#20c2e9 70%,#89e4f3); }
 .gm-drop-ball--4 i { background:linear-gradient(140deg,#fff1bf,#e8b13c 70%,#f3dba2); }
-.gm-running-light { position:absolute; z-index:5; left:46%; right:46%; bottom:2.5%; display:flex; justify-content:space-between; }
-.gm-running-light i { width:6%; height:2px; border-radius:2px; background:#e7daff; box-shadow:0 0 4px #bb8aff; }
 .gm-live { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .gm-machine[data-count="1"] .gm-drop-ball { display:none; }
 .gm-machine[data-count="1"] .gm-drop-ball:first-child { display:block; flex-basis:23%; }
 .gm-machine[data-phase="spinning"] .gm-ball { animation:gm-tumble-one .74s ease-in-out calc(var(--gm-i) * -71ms) infinite alternate; }
 .gm-machine[data-phase="spinning"][data-count="5"] .gm-ball { animation:gm-tumble-five .58s cubic-bezier(.45,.03,.48,1) calc(var(--gm-i) * -53ms) infinite alternate; }
 .gm-machine[data-phase="spinning"] .gm-dial-handle { opacity:1; animation:gm-turn 1.05s cubic-bezier(.3,.1,.3,1) infinite; }
+.gm-machine[data-phase="spinning"] .gm-dial-ring { animation:gm-knob-one 1.65s cubic-bezier(.2,.5,.3,1) both; }
 .gm-machine[data-phase="spinning"] .gm-dial-center { opacity:1; }
 .gm-machine[data-phase="spinning"][data-count="5"] .gm-dial-handle { animation-duration:.72s; }
-.gm-machine[data-phase="spinning"] .gm-running-light i { animation:gm-light .75s ease-in-out infinite alternate; }
-.gm-machine[data-phase="spinning"] .gm-running-light i:nth-child(2n) { animation-delay:-.4s; }
+.gm-machine[data-phase="spinning"][data-count="5"] .gm-dial-ring { animation-name:gm-knob-five; animation-duration:2.95s; }
 .gm-machine[data-phase="spinning"][data-count="5"] .gm-device { animation:gm-machine-sway .36s ease-in-out infinite alternate; }
 .gm-machine[data-phase="dropping"] .gm-door,.gm-machine[data-phase="revealed"] .gm-door { transform:perspective(100px) rotateX(68deg); opacity:.3; }
 .gm-machine[data-phase="dropping"] .gm-delivery-light,.gm-machine[data-phase="revealed"] .gm-delivery-light { opacity:1; }
 .gm-machine[data-phase="dropping"] .gm-drop-ball { animation:gm-drop .55s cubic-bezier(.2,.5,.7,1.1) calc(var(--gm-drop-i) * 120ms) forwards; }
-.gm-machine[data-phase="revealed"] .gm-drop-ball { opacity:1; transform:translateY(0); box-shadow:0 0 12px #bd8bffb3; }
-.gm-machine[data-phase="revealed"] .gm-pool-title { color:#fff; text-shadow:0 0 12px #edb8ff; }
+.gm-machine[data-phase="revealed"] .gm-drop-ball { opacity:1; transform:translateY(0); box-shadow:0 0 8px #97e4ff80; }
+.gm-machine[data-phase="revealed"] .gm-pool-title { color:#2154cc; }
 .gm-machine[data-phase="destroyed"] * { animation:none !important; transition:none !important; }
 @keyframes gm-float { 0%,100% { transform:translate3d(0,0,0) rotate(-3deg); } 33% { transform:translate3d(3px,-3px,0) rotate(1deg); } 66% { transform:translate3d(-1px,-6px,0) rotate(4deg); } }
 @keyframes gm-tumble-one { 0% { transform:translate3d(-4px,2px,0) rotate(-10deg); } 50% { transform:translate3d(3px,-9px,0) rotate(11deg); } 100% { transform:translate3d(5px,-3px,0) rotate(24deg); } }
 @keyframes gm-tumble-five { 0% { transform:translate3d(-8px,5px,0) rotate(-20deg); } 45% { transform:translate3d(6px,-15px,0) rotate(25deg); } 100% { transform:translate3d(10px,-4px,0) rotate(47deg); } }
 @keyframes gm-turn { from { transform:rotate(-35deg); } to { transform:rotate(325deg); } }
-@keyframes gm-light { from { opacity:.35; } to { opacity:1; } }
+@keyframes gm-knob-one { from { transform:rotate(0); } to { transform:rotate(360deg); } }
+@keyframes gm-knob-five { from { transform:rotate(0); } to { transform:rotate(720deg); } }
 @keyframes gm-machine-sway { from { transform:rotate(-.4deg); } to { transform:rotate(.4deg); } }
 @keyframes gm-drop { 0% { opacity:0; transform:translateY(-170%) rotate(-60deg); } 35% { opacity:1; } 75% { transform:translateY(0) rotate(8deg); } 88% { transform:translateY(-16%) rotate(-4deg); } 100% { opacity:1; transform:translateY(0) rotate(0); } }
 @media (prefers-reduced-motion:reduce) { .gm-machine *, .gm-machine *::before, .gm-machine *::after { animation:none !important; transition:none !important; }.gm-machine[data-phase="dropping"] .gm-drop-ball { opacity:1; transform:none; } }

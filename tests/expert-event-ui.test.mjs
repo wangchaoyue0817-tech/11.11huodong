@@ -5,7 +5,7 @@ import {START,END,VOUCHER_END,fresh,submitOrder,claimDaily} from '../public/expe
 import {loadEvent,saveEvent,setEventClock} from '../public/expert-event-session.js';
 import {
   eventCount,progressGeometry,progressMarkup,focusProgress,resultMarkup,activityHubMarkup,
-  rankingState,openActivityHub,openDraw,closeEventDialog,openRules,openProgress
+  rankingState,openActivityHub,openDraw,closeEventDialog,openRules,openProgress,openLeaderboard
 } from '../public/expert-event-ui.js';
 
 const T=START+10*3600000;
@@ -243,6 +243,69 @@ test('opening and switching hub pools preserves the scenario state and current p
   assert.equal(dialog().getAttribute('aria-label'),'专鉴有礼 · 活动规则');
   dialog().querySelector('[data-ev-close]').click();
   assert.equal(dialog().querySelector('[data-hub-pool="advanced"]').getAttribute('aria-selected'),'true');
+  assert.deepEqual(loadEvent(),state);
+});
+
+test('switching leaderboard tabs updates reward and personal final-result count without changing session data',t=>{
+  const state=orders(14);
+  state.demoRanking=true;
+  state.users=[{uid:state.uid,username:'自己的名字'}];
+  state.orders=state.orders.map((order,index)=>({...order,result:index<5?'true':'false',resultAt:T+100+index}));
+  const {dialog}=dialogHarness(t,state);
+  openLeaderboard();
+  assert.equal(dialog().querySelector('[data-kind="true"]').getAttribute('aria-selected'),'true');
+  assert.match(dialog().querySelector('.ev-rank-reward').textContent,/200/);
+  assert.match(dialog().querySelector('.ev-my-rank').textContent,/5\s*单鉴真/);
+  dialog().querySelector('[data-kind="false"]').click();
+  assert.equal(dialog().querySelector('[data-kind="false"]').getAttribute('aria-selected'),'true');
+  assert.equal(dialog().querySelector('[data-kind="true"]').getAttribute('aria-selected'),'false');
+  assert.match(dialog().querySelector('.ev-rank-reward').textContent,/终身免费专鉴/);
+  assert.match(dialog().querySelector('.ev-my-rank').textContent,/9\s*单鉴假/);
+  dialog().querySelector('[data-kind="true"]').click();
+  assert.match(dialog().querySelector('.ev-my-rank').textContent,/5\s*单鉴真/);
+  assert.deepEqual(loadEvent(),state);
+});
+
+test('leaderboard keyboard tab navigation updates the selection and keeps focus on the selected tab',t=>{
+  const {dialog,document}=dialogHarness(t);
+  openLeaderboard();
+  for(const [key,expected] of [['ArrowRight','false'],['Home','true'],['End','false'],['ArrowLeft','true']]) {
+    const selected=dialog().querySelector('[aria-selected="true"]');
+    const event={type:'keydown',key};
+    selected.dispatchEvent(event);
+    const next=dialog().querySelector(`[data-kind="${expected}"]`);
+    assert.equal(event.defaultPrevented,true);
+    assert.equal(next.getAttribute('aria-selected'),'true');
+    assert.equal(document.activeElement,next);
+  }
+});
+
+test('hub ranking rules return to the same ranking tab and closing it restores the original selected pool',t=>{
+  const state=orders(20),{dialog}=dialogHarness(t,state);
+  openActivityHub({pool:'advanced'});
+  dialog().querySelector('[data-hub-rank]').click();
+  assert(dialog().classList.contains('ev-ranking-dialog'));
+  dialog().querySelector('[data-kind="false"]').click();
+  dialog().querySelector('[data-rules]').click();
+  assert.equal(dialog().getAttribute('aria-label'),'专鉴有礼 · 活动规则');
+  dialog().querySelector('[data-ev-close]').click();
+  assert(dialog().classList.contains('ev-ranking-dialog'));
+  assert.equal(dialog().querySelector('[data-kind="false"]').getAttribute('aria-selected'),'true');
+  assert.match(dialog().querySelector('.ev-rank-reward').textContent,/终身免费专鉴/);
+  dialog().querySelector('[data-ev-close]').click();
+  assert(dialog().classList.contains('ev-hub-dialog'));
+  assert.equal(dialog().querySelector('[data-hub-pool="advanced"]').getAttribute('aria-selected'),'true');
+  assert.deepEqual(loadEvent(),state);
+});
+
+test('going to expert identification from a hub leaderboard navigates once and does not reopen the hub',t=>{
+  const state=orders(20),{dialog,navigations}=dialogHarness(t,state);
+  openActivityHub({pool:'advanced'});
+  dialog().querySelector('[data-hub-rank]').click();
+  dialog().querySelector('[data-kind="false"]').click();
+  dialog().querySelector('[data-rank-expert]').click();
+  assert.deepEqual(navigations,[['expert',{intent:'open-expert'}]]);
+  assert.equal(dialog(),null);
   assert.deepEqual(loadEvent(),state);
 });
 
