@@ -10,18 +10,14 @@ const section=document.createElement('section');section.id='expertEvent';section
 $('expertHome').append(section);
 
 function renderHome(){
- const s=loadEvent(),now=eventNow(),balance=balances(s,now),n=eventCount(s),enabled=active(now);
+ const s=loadEvent(),now=eventNow(),balance=balances(s,now),enabled=active(now);
  homeMachine?.destroy();
  section.innerHTML=`<div class="eh-campaign">
- <div class="eh-campaign-top"><span class="eh-event-chip"><i></i> 专鉴有礼</span><button class="eh-rule-button" data-eh="rules">活动规则 ${icon()}</button></div>
- <div class="eh-campaign-heading"><div><h2>好礼<span>扭出来</span></h2><p>${enabled?'每天一次免费扭蛋':now<START?'10 月 27 日开启':'本期活动已结束'}</p></div>
- <button class="eh-rank-pill" data-eh="ranking"><span class="eh-rank-spark">${icon('crown')}</span><span>王者榜<small>榜上有礼</small></span>${icon()}</button></div>
+ <div class="eh-campaign-copy"><h2>专鉴有礼</h2><p>${enabled?'每天免费扭一次':now<START?'10 月 27 日开启':'本期活动已结束'}</p>
+ <button class="eh-enter-button" data-eh="hub"><span>${enabled?(balance.daily?'免费扭一次':'去扭蛋'):'查看活动'}</span>${icon()}</button>
+ <div class="eh-campaign-links"><button class="eh-rank-pill" data-eh="ranking">${icon('crown')}王者榜 ${icon()}</button><button class="eh-rule-button" data-eh="rules">规则 ${icon()}</button></div></div>
  <button class="eh-machine-display" data-eh="hub" aria-label="打开扭蛋机，选择抽奖券"><div class="eh-machine">${machineMarkup({pool:'advanced',compact:true})}</div></button>
- <div class="eh-prize-caption"><span>YSL 气垫</span><i></i><span>COACH</span><i></i><span>雷蛇耳机</span></div>
- <button class="eh-enter-button" data-eh="hub"><span>${enabled?(balance.daily?'免费扭蛋，开启好运':'去扭蛋，开启好运'):'查看抽奖中心'}</span><span class="eh-enter-arrow">${icon()}</span></button>
- <div class="eh-daily-note">${icon('clock')}${!enabled?(now<START?'活动尚未开始，可查看奖品与规则':'抽奖券已过期，历史记录仍可查看'):balance.daily?'今日免费券已到账 · 仅限今日使用':'每日免费赠券，当天有效'}</div>
- <div class="eh-pocket"><button data-eh="progress"><span>累计专鉴 <b>${n}</b> 单</span><small>查看进度 ${icon()}</small></button><button data-eh="center"><span>我的抽奖券 <b>${balance.ordinary+balance.advanced}</b></span><small>查看全部 ${icon()}</small></button></div>
- </div><div class="eh-footer"><span>交互演示 · ${new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit'}).format(now)}</span><button data-eh="demo">${icon('spark')}模拟场景</button></div>`;
+ </div><div class="eh-footer"><span>交互演示</span><button data-eh="demo">${icon('spark')}模拟场景</button></div>`;
  homeMachine=mountMachine(section.querySelector('.gm-machine'));
  section.querySelectorAll('[data-eh]').forEach(b=>b.onclick=()=>{
   const a=b.dataset.eh;if(a==='rules')openRules();if(a==='ranking')openLeaderboard();

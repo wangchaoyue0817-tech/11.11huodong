@@ -218,34 +218,33 @@ test('machine has no global business state and CSS stops movement for reduced mo
   assert.match(css, /gm-tumble-five/);
 });
 
-test('modern v3 cabinet keeps its moving glass capsules separate from the static body art', async () => {
+test('brand-aligned v4 cabinet keeps its moving glass capsules separate from the static body art', async () => {
   const html = machineMarkup({compact: true});
   const css = await readFile(new URL('../public/capsule-machine.css', import.meta.url), 'utf8');
-  const png = await readFile(new URL('../public/assets/gacha/machine-body-v3.png', import.meta.url));
+  const png = await readFile(new URL('../public/assets/gacha/machine-body-v4.png', import.meta.url));
   assert.equal(png.subarray(1, 4).toString(), 'PNG');
   assert.ok([4, 6].includes(png[25]), 'cabinet silhouette must have an alpha channel');
   const ratio = png.readUInt32BE(16) / png.readUInt32BE(20);
   assert.ok(ratio > 1.2 && ratio < 1.3, 'body asset matches the wide 5:4 visual canvas');
-  assert.match(html, /class="gm-body-art" src="assets\/gacha\/machine-body-v3\.png"/);
+  assert.match(html, /class="gm-body-art" src="assets\/gacha\/machine-body-v4\.png"/);
   assert.match(html, /class="gm-chamber"/);
   assert.match(html, /class="gm-balls"/);
   assert.match(html, /class="gm-dial"/);
   assert.match(html, /class="gm-delivery"/);
   assert.doesNotMatch(html, /gm-crown|gm-device-label|gm-back-orbit|gm-running-light|machine-body-v2/);
   assert.match(css, /aspect-ratio:\s*5\s*\/\s*4/);
-  assert.match(css, /#315bff/i);
-  assert.match(css, /#853bff/i);
-  assert.match(css, /#f03ddb/i);
+  assert.match(css, /#7b55ea/i);
+  assert.doesNotMatch(css, /#315bff|#47ceff|#5cdcff|#f03ddb/i, 'shared device no longer reintroduces cyan and neon campaign colors');
 });
 
-test('v3 capsules fit the transparent chamber and leave room for soft movement', async () => {
+test('v4 capsules fit the transparent chamber and leave room for soft movement', async () => {
   const html = machineMarkup({pool: 'advanced'});
   const css = await readFile(new URL('../public/capsule-machine.css', import.meta.url), 'utf8');
   const chamber = css.match(/\.gm-chamber \{[^}]+left:([\d.]+)%; right:([\d.]+)%; top:([\d.]+)%; height:([\d.]+)%/);
   assert.ok(chamber, 'cabinet coordinates remain proportional at every viewport width');
   const [, left, right, top, height] = chamber.map(Number);
   assert.ok(left >= 13 && right >= 13 && top >= 16 && top + height <= 63,
-    'moving capsules stay inside the generated blue glass, clear of cabinet edges');
+    'moving capsules stay inside the generated amethyst glass, clear of cabinet edges');
   const chamberAspect = (100 - left - right) * 1.25 / height;
   const positions = [...html.matchAll(/--gm-x:([\d.]+)%;--gm-y:([\d.]+)%;--gm-size:([\d.]+)%/g)];
   assert.equal(positions.length, 8);

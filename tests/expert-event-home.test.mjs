@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {createDocument,FixtureElement} from './dom-fixture.mjs';
 import * as model from '../public/expert-event-model.js';
 import {progressMarkup,eventCount,icon,escapeHtml} from '../public/expert-event-ui.js';
@@ -10,6 +10,28 @@ import {DEMO_SCENE_GROUPS,buildDemoScene} from '../public/expert-event-demo.js';
 
 const source=readFileSync(new URL('../public/expert-event-home.js',import.meta.url),'utf8');
 const T=model.START+10*3600000;
+test('the compact activity leaves the restored upper hero and its responsive styling unchanged',()=>{
+  const html=readFileSync(new URL('../public/home.html',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../public/expert-refinement.css',import.meta.url),'utf8');
+  const homeCss=readFileSync(new URL('../public/expert-event-home.css',import.meta.url),'utf8');
+  // Preserve the existing upper area from e214863, independently of Git being available.
+  // Ignore markup whitespace, while preserving every element, attribute and text value.
+  const serialize=node=>typeof node==='string'?node.replace(/\s+/g,' ').trim():({
+    tag:node.tagName,
+    attributes:[...node.attributes].sort(([a],[b])=>a.localeCompare(b)),
+    children:node.nodes.map(serialize).filter(value=>value!=='')
+  });
+  const sha=value=>createHash('sha256').update(value).digest('hex');
+  assert.equal(sha(JSON.stringify(serialize(createDocument(html).querySelector('.expert-welcome')))),
+    '2521dbdb6073604da3d8a463238624f4c1b74cddbaf77493a620eec606c71b5d',
+    'the service copy, orb, tags, original CTA and metrics must remain unchanged');
+  assert.equal(sha(css),'8b11cfedcde7e9ce1a82c2091a9b819d62ba089edc4e2f591a363e0d0eb06247',
+    'keep the original hero spacing, type scale, CTA and narrow-screen layout');
+  assert.doesNotMatch(homeCss,/\.expert-(?:welcome|hero|spectrum)\b/,
+    'activity styles must not override the preserved upper hero');
+  assert.match(homeCss,/\.is-expert\{background:radial-gradient\(ellipse at 100% 50%,#452ca740,transparent 65%\),linear-gradient\(160deg,#131839,#1d1640\)!important\}/,
+    'preserve the background behind the upper area');
+});
 test('expert home restores the complete original service hero and one working category entry',()=>{
   const html=readFileSync(new URL('../public/home.html',import.meta.url),'utf8');
   const css=readFileSync(new URL('../public/expert-refinement.css',import.meta.url),'utf8');
@@ -236,23 +258,71 @@ test('demo milestones grant immediately usable tickets instead of future-dated b
   }
 });
 
-test('expert home is a compact display entry without inline progress, draw controls or category list',()=>{
+test('compact activity keeps all destinations reachable without inline draw controls or duplicate information',()=>{
   const f=fixture({initial:buildDemoScene('progress-14').state});
   const home=f.document.getElementById('expertEvent');
+  const before=f.state;
   assert(home.querySelector('.eh-machine-display'));
+  assert(home.querySelector('.eh-campaign-copy'));
+  assert(home.querySelector('.eh-campaign-links'));
   assert.equal(home.querySelector('.ev-progress'),null);
   assert.equal(home.querySelector('[data-draw]'),null);
   assert.equal(home.querySelector('[data-pool]'),null);
+  for(const selector of ['.eh-campaign-top','.eh-campaign-heading','.eh-event-chip','.eh-rank-spark',
+    '.eh-prize-caption','.eh-enter-arrow','.eh-daily-note','.eh-pocket']){
+    assert.equal(home.querySelector(selector),null,`${selector} must be removed, not hidden`);
+  }
   assert.doesNotMatch(home.textContent,/美妆[、/\s]+包袋|鞋靴[、/\s]+服饰|手表[、/\s]+数码/);
+  assert.doesNotMatch(home.textContent,/好礼扭出来|YSL|COACH|雷蛇|累计专鉴|我的抽奖券|开启好运/);
+  assert.equal(home.querySelector('h2').textContent,'专鉴有礼');
+  assert.match(home.querySelector('.eh-campaign-copy p').textContent,/每天免费扭一次/);
+  assert.match(readFileSync(new URL('../public/expert-event-ui.js',import.meta.url),'utf8'),/今日赠券当天有效/,
+    'the shared hub retains the expiry reminder removed from the compact entry');
+  assert.deepEqual(home.querySelectorAll('[data-eh]').map(button=>button.dataset.eh).sort(),
+    ['demo','hub','hub','ranking','rules']);
   const hubButtons=home.querySelectorAll('[data-eh="hub"]');
   assert.equal(hubButtons.length,2,'the machine and main button open the same shared hub');
   for(const button of hubButtons)button.click();
   assert.equal(f.hubs.length,2);
   assert.equal(f.draws.length,0,'home never starts a draw without the hub');
-  home.querySelector('[data-eh="progress"]').click();
-  assert.equal(f.progress.length,1);
-  home.querySelector('[data-eh="center"]').click();
-  assert.deepEqual(f.navigations.at(-1),{route:'lottery',event:'expert'},'expert entry replaces any retained card campaign context');
+  home.querySelector('[data-eh="ranking"]').click();
+  home.querySelector('[data-eh="rules"]').click();
+  home.querySelector('[data-eh="demo"]').click();
+  assert.equal(f.rankings.length,1);
+  assert.equal(f.rules.length,1);
+  assert.equal(f.dialogs.at(-1).title,'模拟场景');
+  assert.deepEqual(f.state,before,'opening compact entry destinations does not consume tickets or change order progress');
+});
+
+test('compact entry removes the old vertical promotion styling and retains horizontal composition on narrow phones',()=>{
+  const css=readFileSync(new URL('../public/expert-event-home.css',import.meta.url),'utf8');
+  assert.doesNotMatch(css,/\.eh-(?:campaign-top|campaign-heading|event-chip|rank-spark|prize-caption|enter-arrow|daily-note|pocket)\b/,
+    'removed content must not retain obsolete presentation rules');
+  const campaign=css.match(/\.eh-campaign\{([^}]+)\}/)?.[1]||'';
+  assert.match(campaign,/display:grid/);
+  assert.match(campaign,/grid-template-columns:minmax\(0,1fr\) \d+px/);
+  const minimumHeight=Number(campaign.match(/min-height:(\d+)px/)?.[1]);
+  assert(minimumHeight>0&&minimumHeight<=170,'the secondary activity entry should reserve at most 170px');
+  assert.doesNotMatch(css,/grid-template-columns:1fr(?:;|})/,
+    'narrow screens must not stack the machine beneath the copy again');
+});
+
+test('compact daily entry distinguishes available tickets and ended campaigns without altering ticket balances',()=>{
+  const claimed=model.claimDaily(model.fresh(),T).state;
+  const consumed=model.draw(claimed,{pool:'ordinary',count:1,requestId:'compact-guide'},T,()=>0).state;
+  for(const [initial,now,buttonText,detail] of [
+    [claimed,T,'免费扭一次','每天免费扭一次'],
+    [consumed,T,'去扭蛋','每天免费扭一次'],
+    [claimed,model.START-1,'查看活动','10 月 27 日开启'],
+    [claimed,model.END,'查看活动','本期活动已结束']
+  ]){
+    const f=fixture({initial,now});
+    assert.equal(f.document.querySelector('.eh-enter-button span').textContent,buttonText);
+    assert.equal(f.document.querySelector('.eh-campaign-copy p').textContent,detail);
+    f.document.querySelector('.eh-enter-button').click();
+    assert.equal(f.hubs.length,1);
+    assert.deepEqual(f.state,initial);
+  }
 });
 
 test('active AI conversion retains the full milestone track and moves category scope into rules',()=>{

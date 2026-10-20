@@ -75,7 +75,7 @@ export function machineMarkup({pool = 'ordinary', compact = false} = {}) {
     <div class="gm-aura" aria-hidden="true"></div>
     <div class="gm-floor" aria-hidden="true"></div>
     <div class="gm-device">
-      <img class="gm-body-art" src="assets/gacha/machine-body-v3.png" alt="" aria-hidden="true" draggable="false" decoding="async">
+      <img class="gm-body-art" src="assets/gacha/machine-body-v4.png" alt="" aria-hidden="true" draggable="false" decoding="async">
       <div class="gm-chamber" aria-hidden="true">
         <div class="gm-balls">${ballsMarkup(tier)}</div>
         <div class="gm-glass"></div><div class="gm-chamber-floor"></div>
