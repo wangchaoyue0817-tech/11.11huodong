@@ -1,7 +1,7 @@
 import {START,active,dayKey,balances,claimDaily,submitOrder,completeOrder,isEligibleCategory} from './expert-event-model.js';
 import {loadEvent,saveEvent,eventNow} from './expert-event-session.js';
 import {machineMarkup,mountMachine,prizeArt} from './capsule-machine.js';
-import {progressMarkup,focusProgress,openActivityHub,openDraw,openProgress,openLeaderboard,openRules,showEventDialog,closeEventDialog,eventCount,icon,escapeHtml as esc} from './expert-event-ui.js';
+import {progressMarkup,rewardArt,focusProgress,openActivityHub,openDraw,openProgress,openLeaderboard,openRules,showEventDialog,closeEventDialog,eventCount,icon,escapeHtml as esc} from './expert-event-ui.js';
 import {DEMO_SCENE_GROUPS,applyDemoScene} from './expert-event-demo.js';
 
 const $=id=>document.getElementById(id);
@@ -32,7 +32,7 @@ function enterEvent({scroll=false}={}){
  const now=eventNow(),guide=r.state.tickets.find(ticket=>ticket.firstGuide&&ticket.remaining>0&&ticket.at<=now&&ticket.expiresAt>now);
  if(active(now)&&guide&&r.state.guideShownTicketId!==guide.id){
   saveEvent({...r.state,guideShownTicketId:guide.id});
-  const d=showEventDialog('今天的好运，从这里开始',`<div class="eh-guide"><div class="eh-guide-ticket">${prizeArt('voucher')}</div><span class="ev-eyebrow">每日免费礼遇</span><h2>送你一次免费扭蛋</h2><p>1 张普通抽奖券已到账<br>今日有效，先试试你的手气</p><button class="ev-primary" data-guide>免费扭一次 ${icon()}</button><button class="ev-text-button ev-full" data-later>稍后再用</button></div>`);
+  const d=showEventDialog('今天的好运，从这里开始',`<div class="eh-guide"><div class="eh-guide-ticket">${rewardArt('ordinary')}</div><span class="ev-eyebrow">每日免费礼遇</span><h2>送你一次免费扭蛋</h2><p>1 张普通抽奖券已到账<br>今日有效，先试试你的手气</p><button class="ev-primary" data-guide>免费扭一次 ${icon()}</button><button class="ev-text-button ev-full" data-later>稍后再用</button></div>`);
   d.querySelector('[data-guide]').onclick=()=>{d.close();openDraw({pool:'ordinary',count:1});};d.querySelector('[data-later]').onclick=()=>d.close();
  }
 }
@@ -62,12 +62,11 @@ function closeFlow(){clearTimeout(aiTimer);flow?.remove();flow=null;reportId=nul
 function renderAI(){
  if(!flow)return;
  product={category:'美妆',brand:'圣罗兰 YSL',style:'气垫粉底',name:'圣罗兰 · 气垫粉底'};
- const s=loadEvent(),enabled=active(eventNow());
+ const s=loadEvent(),eligible=active(eventNow())&&isEligibleCategory(product.category);
  flow.querySelector('.eh-flow-body').innerHTML=`<article class="eh-ai-report"><div class="eh-product-top"><span><small>YSL · SAINT LAURENT</small><h2>圣罗兰气垫粉底</h2><p>AI 鉴别报告</p></span>${prizeArt('ysl-cushion')}</div><div class="eh-ai-verdict"><span>${icon('shield')} 正品特征</span><b>75.3<small>%</small></b><p>AI 把握度 · 演示结果</p><div><i></i></div></div><p class="eh-ai-desc">当前图片的包装、标识与工艺呈现正品特征。进一步确认，建议交由专家结合更多细节综合鉴别。</p><div class="eh-ai-metrics"><span>图片完整度 <b>73.2%</b></span><span>已观察点位 <b>4 个</b></span></div></article>
- <article class="eh-convert-card"><div class="eh-convert-glow"></div><div class="eh-convert-top"><span class="eh-expert-badge">${icon('shield')}</span><div><span class="ev-eyebrow">更进一步，交给专业</span><h2>专家一对一鉴别</h2></div><span class="eh-free-badge">${enabled?'限时':'专鉴'}<br><b>免费</b></span></div><p>专家复核关键细节，为你的选择多一份依据。</p>${enabled?`<div class="eh-benefits"><span>${icon('gift')}专鉴还可抽好礼</span><button class="ev-text-button" data-ai-rules>活动规则 ${icon()}</button></div>${progressMarkup(s)}`:''}<button class="ev-primary" data-ai-expert>${enabled?'免费专鉴，继续攒好运':'免费专鉴'} ${icon()}</button>${enabled?'':`<small class="eh-convert-scope">${eventNow()<START?'专鉴有礼活动尚未开始，当前仍可免费专鉴':'专鉴有礼活动已结束，仍可免费专鉴'}</small>`}</article>
+ <article class="eh-convert-card"><div class="eh-convert-top"><h2>专家一对一鉴别</h2><span class="eh-free-badge">限时免费</span></div><p class="eh-convert-description">错一赔三•专家组研判•最快30分钟出结果</p>${eligible?progressMarkup(s,{compact:true}):''}<div class="eh-convert-actions"><button type="button" class="ev-secondary" data-ai-details>查看详情</button><button type="button" class="ev-primary" data-ai-expert>去专鉴</button></div></article>
  <p class="ev-demo-note">当前结果为流程演示，不构成真实鉴定结论。</p>`;
  flow.querySelector('[data-ai-expert]').onclick=()=>openUpload(product);
- flow.querySelector('[data-ai-rules]')?.addEventListener('click',()=>openRules());
  focusProgress(flow);
 }
 function openUpload(selection={}){
@@ -113,7 +112,7 @@ function runDemoScene(id,options={}){
  else if(scene.destination==='upload')openUpload(scene.selection);
  else if(scene.destination==='lottery')window.jianxNavigate?.('lottery',{event:scene.event,pool:scene.pool,ticketStatus:scene.ticketStatus});
  else enterEvent();
- if(scene.notice)showEventDialog('每日赠券',`<div class="eh-day-notice"><img src="assets/gacha/reward-ordinary.png" alt="普通抽奖券"><h2>${esc(scene.notice)}</h2><p>每日赠券仅限当天使用，活动获得的里程碑券可保留至活动结束。</p><button class="ev-primary" data-day-hub>去扭蛋 ${icon()}</button></div>`).querySelector('[data-day-hub]').onclick=()=>openActivityHub();
+ if(scene.notice)showEventDialog('每日赠券',`<div class="eh-day-notice"><img src="assets/gacha/reward-ordinary-v6.png" alt="普通抽奖券"><h2>${esc(scene.notice)}</h2><p>每日赠券仅限当天使用，活动获得的里程碑券可保留至活动结束。</p><button class="ev-primary" data-day-hub>去扭蛋 ${icon()}</button></div>`).querySelector('[data-day-hub]').onclick=()=>openActivityHub();
 }
 function openDrawSetup(){
  const options=[['random','自然随机'],['physical','抽中实物'],['voucher','抽中鉴定券'],['none','再接再厉'],['mixed','五连混合结果']];

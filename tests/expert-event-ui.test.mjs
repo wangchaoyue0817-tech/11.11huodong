@@ -173,14 +173,16 @@ test('rail geometry uses actual count, including odd counts, and preserves all f
   assert.equal(fifty.querySelector('[data-step="52"]').classList.contains('is-next'),true);
 });
 
-test('both progress sizes use dimensional ordinary and gold artwork with explicit reward states',()=>{
+test('both progress sizes share fresh ticket artwork and accessible states without redundant status copy',()=>{
   for(const compact of [false,true]) {
     const document=view(progressMarkup(orders(9),{compact}));
-    assert.equal(document.querySelector('[data-step="2"] img').getAttribute('src'),'assets/gacha/reward-ordinary.png');
-    assert.equal(document.querySelector('[data-step="10"] img').getAttribute('src'),'assets/gacha/reward-advanced.png');
-    assert.equal(document.querySelector('[data-step="8"] .ev-node-state').textContent,'已获得');
-    assert.equal(document.querySelector('[data-step="10"] .ev-node-state').textContent,'下一奖励');
-    assert.equal(document.querySelector('[data-step="12"] .ev-node-state').textContent,'待解锁');
+    assert.equal(document.querySelector('[data-step="2"] img').getAttribute('src'),'assets/gacha/reward-ordinary-v6.png');
+    assert.equal(document.querySelector('[data-step="10"] img').getAttribute('src'),'assets/gacha/reward-advanced-v6.png');
+    assert.equal(document.querySelectorAll('.ev-node-state').length,0);
+    assert.doesNotMatch(document.querySelector('.ev-progress').textContent,/已获得|下一奖励|待解锁/);
+    assert.match(document.querySelector('[data-step="8"]').getAttribute('aria-label'),/已达成/);
+    assert.match(document.querySelector('[data-step="10"]').getAttribute('aria-label'),/未达成/);
+    assert.match(document.querySelector('[data-step="12"]').getAttribute('aria-label'),/未达成/);
     assert.equal(document.querySelectorAll('[data-step="10"]').length,1);
     assert.equal(document.querySelector('[data-step="10"] small').textContent,'高级券');
   }

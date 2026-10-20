@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
 import {createDocument} from './dom-fixture.mjs';
 import {START,END,fresh} from '../public/expert-event-model.js';
 import {leaderboardMarkup} from '../public/expert-event-ui.js';
@@ -197,18 +196,14 @@ test('leaderboard markup does not mutate session orders, identities or rewards w
   assert.deepEqual(state,before);
 });
 
-test('generated podium is decorative and retains transparent three-to-two geometry for dynamic text overlays',async()=>{
-  const document=view(rankingFixture(baseUsers));
-  const images=document.querySelectorAll('img.ev-podium-art');
-  assert.equal(images.length,1);
-  assert.equal(images[0].getAttribute('src'),'assets/gacha/leaderboard-podium-v3.png');
-  assert.equal(images[0].getAttribute('alt'),'');
-  assert.equal(images[0].getAttribute('aria-hidden'),'true');
-  const png=await readFile(new URL('../public/assets/gacha/leaderboard-podium-v3.png',import.meta.url));
-  assert.deepEqual([...png.subarray(0,8)],[137,80,78,71,13,10,26,10],'podium asset must be a readable PNG');
-  assert.equal(png.subarray(12,16).toString(),'IHDR');
-  const width=png.readUInt32BE(16),height=png.readUInt32BE(20);
-  assert(width>0&&height>0);
-  assert.equal(width*2,height*3,'podium overlay coordinates require a 3:2 image');
-  assert([4,6].includes(png[25]),'podium asset must carry an alpha channel');
+test('podium remains readable without artwork and exposes each winner as structured text',()=>{
+  const document=view(rankingFixture(baseUsers)),podium=document.querySelector('.ev-podium');
+  assert.equal(podium.querySelectorAll('img').length,0,'the podium no longer depends on the bright decorative campaign image');
+  assert.equal(podium.getAttribute('aria-label'),'前三名领奖台');
+  for(const rank of [1,2,3]) {
+    const person=seat(document,rank);
+    assert.match(person.getAttribute('aria-label'),new RegExp(`第 ${rank} 名`));
+    assert(person.querySelector('.ev-podium-info').textContent.includes('单'));
+    assert.equal(person.querySelector('.ev-podium-rank').getAttribute('aria-hidden'),'true','duplicate visual rank is not announced twice');
+  }
 });

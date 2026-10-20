@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {createHash,randomUUID} from 'node:crypto';
 import {createDocument,FixtureElement} from './dom-fixture.mjs';
 import * as model from '../public/expert-event-model.js';
-import {progressMarkup,eventCount,icon,escapeHtml} from '../public/expert-event-ui.js';
+import {progressMarkup,rewardArt,eventCount,icon,escapeHtml} from '../public/expert-event-ui.js';
 import {DEMO_SCENE_GROUPS,buildDemoScene} from '../public/expert-event-demo.js';
 
 const source=readFileSync(new URL('../public/expert-event-home.js',import.meta.url),'utf8');
@@ -114,7 +114,7 @@ function fixture({initial=model.fresh(),now=T,expertVisible=true}={}) {
     resetEvent:()=>{state=model.fresh();clock=T;emit('expert-event-change');return structuredClone(state);},
     machineMarkup:()=>'<div class="gm-machine"></div>',mountMachine:()=>({destroy(){}}),
     prizeArt:()=>'<span class="prize-art"></span>',
-    progressMarkup,eventCount,icon,esc:escapeHtml,focusProgress(){},
+    progressMarkup,rewardArt,eventCount,icon,esc:escapeHtml,focusProgress(){},
     openProgress:options=>progress.push(structuredClone(options)),openLeaderboard:kind=>rankings.push(kind),
     openRules:options=>rules.push(options),openDraw:options=>draws.push(options),
     openActivityHub:options=>hubs.push(options),
@@ -152,15 +152,25 @@ test('expired activity keeps free upload available without promising milestone r
   assert.equal(f.progress.length,0);
 });
 
-test('AI conversion after deadline retains free expert CTA without lottery or progress promises',()=>{
-  const f=fixture({now:model.END,expertVisible:false});
-  f.window.jianxShowBeautyDemo();f.finishAI();
-  const card=f.document.querySelector('.eh-convert-card');
-  assert.equal(card.querySelector('.eh-benefits'),null);
-  assert.equal(card.querySelector('.ev-progress'),null);
-  assert.match(card.querySelector('[data-ai-expert]').textContent,/免费专鉴/);
-  assert.doesNotMatch(card.querySelector('[data-ai-expert]').textContent,/攒|抽奖/);
-  assert.match(card.querySelector('.eh-convert-scope').textContent,/活动已结束/);
+test('AI conversion outside the activity period keeps the two service actions without lottery progress',()=>{
+  for(const now of [model.START-1,model.END]){
+    const f=fixture({now,expertVisible:false});
+    f.window.jianxShowBeautyDemo();f.finishAI();
+    const card=f.document.querySelector('.eh-convert-card');
+    assert.equal(card.querySelector('.ev-progress'),null);
+    assert.equal(card.querySelector('h2').textContent,'专家一对一鉴别');
+    assert.equal(card.querySelector('.eh-free-badge').textContent,'限时免费');
+    assert.equal(card.querySelector('.eh-convert-description').textContent,'错一赔三•专家组研判•最快30分钟出结果');
+    assert.deepEqual(card.querySelectorAll('button').map(button=>button.textContent),['查看详情','去专鉴']);
+    assert.doesNotMatch(card.textContent,/更进一步|攒好运|专家复核|专鉴还可|活动规则|活动已结束|活动尚未开始/);
+    const before=f.state;
+    card.querySelector('[data-ai-details]').click();
+    assert.equal(f.document.querySelector('.eh-convert-card'),card,'details stays on the current demo surface');
+    assert.deepEqual(f.state,before);
+    card.querySelector('[data-ai-expert]').click();f.flush();
+    assert.match(f.document.querySelector('.eh-selected-product').textContent,/圣罗兰/);
+    assert(f.document.querySelector('[data-submit]'));
+  }
 });
 
 test('eligible upload opens progress after submission while card upload never opens activity progress',()=>{
@@ -178,6 +188,11 @@ test('a first ticket claimed in the center still gets its guide once on the expe
   const f=fixture({initial});f.enter();
   assert.equal(f.dialogs.length,1);
   assert.match(f.dialogs[0].title,/好运/);
+  const ticketArt=f.dialogs[0].querySelector('.eh-guide-ticket .ev-reward-art');
+  assert(ticketArt,'the first free ticket uses the same lottery-ticket artwork as the pool and milestones');
+  assert.equal(ticketArt.getAttribute('src'),'assets/gacha/reward-ordinary-v6.png');
+  assert.equal(ticketArt.getAttribute('alt'),'普通淡紫抽奖券');
+  assert.equal(f.dialogs[0].querySelector('.eh-guide-ticket .gm-prize-art'),null);
   assert.equal(f.state.guideShownTicketId,initial.guideTicketId);
   f.dialogs[0].close();f.enter();
   assert.equal(f.dialogs.length,1);
@@ -325,22 +340,35 @@ test('compact daily entry distinguishes available tickets and ended campaigns wi
   }
 });
 
-test('active AI conversion retains the full milestone track and moves category scope into rules',()=>{
+test('active beauty AI conversion keeps the full compact milestone history and exactly the requested service copy',()=>{
   const f=fixture({initial:buildDemoScene('progress-14').state,expertVisible:false});
   f.window.jianxShowBeautyDemo();f.finishAI();
   const card=f.document.querySelector('.eh-convert-card'),track=card.querySelector('.ev-progress');
   assert(track);
-  assert.equal(track.classList.contains('is-compact'),false);
+  assert.equal(track.classList.contains('is-compact'),true);
   assert.equal(track.dataset.current,'14');
   for(const step of [2,10,14])assert(track.querySelector(`[data-step="${step}"]`));
-  assert(card.querySelector('.eh-benefits'));
+  assert.equal(card.querySelector('h2').textContent,'专家一对一鉴别');
+  assert.equal(card.querySelector('.eh-free-badge').textContent,'限时免费');
+  assert.equal(card.querySelector('.eh-convert-description').textContent,'错一赔三•专家组研判•最快30分钟出结果');
+  assert.deepEqual(card.querySelectorAll('button').map(button=>button.textContent),['查看详情','去专鉴']);
+  assert.equal(card.querySelector('.eh-benefits'),null);
+  assert.equal(card.querySelector('.ev-eyebrow'),null);
+  assert.equal(card.querySelector('[data-ai-rules]'),null);
+  assert.equal(card.querySelector('.eh-convert-glow'),null);
   assert.equal(card.querySelector('.eh-convert-scope'),null);
   assert.doesNotMatch(card.textContent,/美妆[、/\s]+包袋|鞋靴[、/\s]+服饰|手表[、/\s]+数码/);
-  card.querySelector('[data-ai-rules]').click();
-  assert.equal(f.rules.length,1);
+  assert.doesNotMatch(card.textContent,/更进一步|攒好运|专家复核|专鉴还可|活动规则/);
+  card.querySelector('[data-ai-details]').click();
+  assert.equal(f.rules.length,0);
+  assert.equal(f.navigations.length,0);
+  assert.equal(f.document.querySelector('.eh-convert-card'),card);
   card.querySelector('[data-ai-expert]').click();f.flush();
   assert.match(f.document.querySelector('.eh-selected-product').textContent,/圣罗兰/);
   assert(f.document.querySelector('[data-submit]'),'AI conversion goes directly to the upload flow');
+  f.document.querySelector('[data-submit]').click();f.flush();
+  assert.equal(eventCount(f.state),15);
+  assert.equal(f.progress.length,1,'the compact CTA keeps the existing eligible appraisal flow');
 });
 
 test('simulation panel exposes all six groups with replay and initial-state recovery',()=>{

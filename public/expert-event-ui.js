@@ -14,7 +14,7 @@ export function progressGeometry(count){
  return {current,end,next:(Math.floor(current/2)+1)*2,nextHigh:(Math.floor(current/10)+1)*10,
   nodeCount:end/2+1,ratio:current/end,steps:Array.from({length:end/2},(_,i)=>(i+1)*2)};
 }
-export const rewardArt=(pool='ordinary',className='')=>`<img class="ev-reward-art ${escapeHtml(className)}" src="assets/gacha/reward-${pool==='advanced'?'advanced':'ordinary'}.png" alt="${pool==='advanced'?'高级金色抽奖券':'普通蓝紫抽奖券'}" loading="lazy" decoding="async" draggable="false">`;
+export const rewardArt=(pool='ordinary',className='')=>`<img class="ev-reward-art ${escapeHtml(className)}" src="assets/gacha/reward-${pool==='advanced'?'advanced':'ordinary'}-v6.png" alt="${pool==='advanced'?'高级香槟色抽奖券':'普通淡紫抽奖券'}" loading="lazy" decoding="async" draggable="false">`;
 export function progressMarkup(state,{compact=false}={}){
  const {current:n,end,next,nextHigh,nodeCount,ratio,steps}=progressGeometry(eventCount(state));
  return `<section class="ev-progress ${compact?'is-compact':''}" aria-label="专鉴活动进度" data-current="${n}">
@@ -22,8 +22,8 @@ export function progressMarkup(state,{compact=false}={}){
  <div class="ev-milestone-scroll" tabindex="0" aria-label="左右滑动查看全部奖励里程碑"><div class="ev-milestone-track" style="--ev-node-count:${nodeCount};--ev-progress-ratio:${ratio}">
  <div class="ev-progress-rail" role="progressbar" aria-label="累计专鉴单数" aria-valuemin="0" aria-valuemax="${end}" aria-valuenow="${n}" aria-valuetext="已完成 ${n} 单，下一奖励在第 ${next} 单"><div class="ev-progress-fill" style="width:${ratio*100}%"></div><span class="ev-rail-shine"></span></div>
  <div class="ev-milestone-origin" aria-hidden="true"><span></span><b>出发</b></div>
- ${steps.map(step=>`<div class="ev-milestone ${step<=n?'is-done':''} ${step===next?'is-next':''} ${step%10===0?'is-premium':''}" data-step="${step}" aria-label="第${step}单，${step%10===0?'高级':'普通'}券${step<=n?'已获得':step===next?'下一奖励':'未达成'}"><span class="ev-milestone-dot">${rewardArt(step%10===0?'advanced':'ordinary')}${step<=n?`<i aria-label="已获得">${icon('check')}</i>`:''}</span><b>${step} 单</b><small>${step%10===0?'高级券':'普通券'}</small><span class="ev-node-state">${step<=n?'已获得':step===next?'下一奖励':'待解锁'}</span></div>`).join('')}
- <div class="ev-current-marker" data-current-count="${n}" aria-label="当前累计第 ${n} 单"><span class="ev-current-pin"></span><strong>${n}<small> 单</small></strong></div>
+ ${steps.map(step=>`<div class="ev-milestone ${step<=n?'is-done':''} ${step===next?'is-next':''} ${step%10===0?'is-premium':''}" data-step="${step}" aria-label="第${step}单，${step%10===0?'高级':'普通'}券${step<=n?'已达成':'未达成'}"><span class="ev-milestone-dot">${rewardArt(step%10===0?'advanced':'ordinary')}</span><b>${step} 单</b><small>${step%10===0?'高级券':'普通券'}</small></div>`).join('')}
+ <div class="ev-current-marker" data-current-count="${n}" aria-label="当前累计第 ${n} 单"><span class="ev-current-pin"></span></div>
  </div></div><div class="ev-progress-note"><span>再鉴 <b>${next-n}</b> 单，得${next%10===0?'高级':'普通'}券</span><span>${next===nextHigh?'尊享奖池即将开启':`距高级券 ${nextHigh-n} 单`} ${icon('spark')}</span></div>
  </section>`;
 }
@@ -167,7 +167,7 @@ export function leaderboardMarkup(state,kind='true'){
  <div class="ev-ranking-tabs" role="tablist" aria-label="选择排行榜">${['true','false'].map(value=>`<button role="tab" data-kind="${value}" aria-selected="${kind===value}"><span>${value==='true'?'鉴真王者':'避雷王者'}</span></button>`).join('')}</div>
  <div class="ev-rank-reward"><span>前三名每人</span><strong>${kind==='true'?'<b>200</b> 元红包':'终身免费专鉴'}</strong><span>＋专属称号</span></div></div>
  <div class="ev-ranking-scroll" tabindex="0" aria-label="排行榜名单">
- <div class="ev-podium" aria-label="前三名领奖台"><img class="ev-podium-art" src="assets/gacha/leaderboard-podium-v3.png" alt="" aria-hidden="true" draggable="false">
+ <div class="ev-podium" aria-label="前三名领奖台">
  ${[1,0,2].map(index=>{const row=top[index],rank=index+1;return `<article class="ev-podium-person place-${rank} ${row?'':'is-vacant'}" data-rank="${rank}" aria-label="第 ${rank} 名${row?`，${escapeHtml(name(row))}，${row.count} 单`:'，虚位以待'}">
  ${row?avatar(row,'ev-podium-avatar'):'<span class="ev-podium-avatar ev-vacant-avatar" aria-hidden="true">?</span>'}
  <span class="ev-podium-rank" aria-hidden="true">${String(rank).padStart(2,'0')}</span>
