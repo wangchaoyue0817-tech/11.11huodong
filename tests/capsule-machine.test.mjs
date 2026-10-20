@@ -165,7 +165,7 @@ test('generated prize sheet is a 4 by 2 grid of square cells with alpha support'
   assert.ok([4, 6].includes(png[25]), 'PNG must carry grayscale or RGB alpha');
   const css = await readFile(new URL('../public/capsule-machine.css', import.meta.url), 'utf8');
   assert.match(css, /\.gm-prize-art--sprite-ready \{ background-image:/);
-  assert.match(css, /background-size: 400% 200%/);
+  assert.match(css, /background-size:\s*400% 200%/);
 });
 
 test('machine markup carries no business actions and includes decorative balls and scoped accessibility', () => {
@@ -212,8 +212,28 @@ test('machine has no global business state and CSS stops movement for reduced mo
   const js = await readFile(new URL('../public/capsule-machine.js', import.meta.url), 'utf8');
   const css = await readFile(new URL('../public/capsule-machine.css', import.meta.url), 'utf8');
   assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(/);
-  assert.match(css, /prefers-reduced-motion: reduce/);
-  assert.match(css, /max-width: 360px/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce/);
+  assert.match(css, /max-width:\s*360px/);
   assert.match(css, /gm-tumble-one/);
   assert.match(css, /gm-tumble-five/);
+});
+
+test('wide v2 cabinet keeps its moving glass capsules separate from the static body art', async () => {
+  const html = machineMarkup({compact: true});
+  const css = await readFile(new URL('../public/capsule-machine.css', import.meta.url), 'utf8');
+  const png = await readFile(new URL('../public/assets/gacha/machine-body-v2.png', import.meta.url));
+  assert.equal(png.subarray(1, 4).toString(), 'PNG');
+  assert.ok([4, 6].includes(png[25]), 'cabinet silhouette must have an alpha channel');
+  const ratio = png.readUInt32BE(16) / png.readUInt32BE(20);
+  assert.ok(ratio > 1.2 && ratio < 1.3, 'body asset matches the wide 5:4 visual canvas');
+  assert.match(html, /class="gm-body-art" src="assets\/gacha\/machine-body-v2\.png"/);
+  assert.match(html, /class="gm-chamber"/);
+  assert.match(html, /class="gm-balls"/);
+  assert.match(html, /class="gm-dial"/);
+  assert.match(html, /class="gm-delivery"/);
+  assert.doesNotMatch(html, /gm-crown|gm-device-label/);
+  assert.match(css, /aspect-ratio:\s*5\s*\/\s*4/);
+  assert.match(css, /#315bff/i);
+  assert.match(css, /#853bff/i);
+  assert.match(css, /#f03ddb/i);
 });

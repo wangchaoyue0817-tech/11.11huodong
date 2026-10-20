@@ -174,3 +174,60 @@ test('messages from wrong origins, unknown windows and invalid destinations are 
   assert.equal(f.location.hash, '#home');
   assert.equal(f.frames.length, 1);
 });
+
+test('demo event, pool and ticket filter survive navigation into a newly created activity frame',()=>{
+  const f=fixture(),home=f.frames[0];
+  f.send(home,{type:'ready'});
+  f.send(home,{type:'navigate',route:'lottery',event:'expert',pool:'advanced',ticketStatus:'expired'});
+  const activity=f.frames[1];
+  assert.equal(lastActivation(activity),undefined);
+  f.send(activity,{type:'ready'});
+  const activation=lastActivation(activity);
+  assert.equal(activation.event,'expert');
+  assert.equal(activation.pool,'advanced');
+  assert.equal(activation.ticketStatus,'expired');
+});
+
+test('ready activity frame receives valid history and future campaign selections without recreation',()=>{
+  const f=fixture(),home=f.frames[0];
+  f.send(home,{type:'ready'});
+  f.send(home,{type:'navigate',route:'lottery',event:'card-past',ticketStatus:'expired'});
+  const activity=f.frames[1];
+  f.send(activity,{type:'ready'});
+  assert.equal(lastActivation(activity).event,'card-past');
+  assert.equal(lastActivation(activity).ticketStatus,'expired');
+  f.send(activity,{type:'navigate',route:'lottery',event:'card-next'});
+  assert.equal(f.frames.length,2);
+  assert.equal(lastActivation(activity).event,'card-next');
+  f.send(activity,{type:'navigate',route:'prizes',event:'expert',pool:'ordinary',ticketStatus:'used'});
+  assert.equal(lastActivation(activity).pool,'ordinary');
+  assert.equal(lastActivation(activity).ticketStatus,'used');
+});
+
+test('shell rejects unknown campaign, pool and ticket-status values while preserving the destination',()=>{
+  const f=fixture(),home=f.frames[0];
+  f.send(home,{type:'ready'});
+  f.send(home,{
+    type:'navigate',route:'lottery',event:'another-campaign',pool:'welcome',
+    ticketStatus:'all',unexpected:'must not forward'
+  });
+  const activity=f.frames[1];
+  f.send(activity,{type:'ready'});
+  const activation=lastActivation(activity);
+  assert.equal(activation.route,'lottery');
+  for(const key of ['event','pool','ticketStatus','unexpected'])assert.equal(Object.hasOwn(activation,key),false);
+});
+
+test('latest pending scene metadata wins before the activity frame becomes ready',()=>{
+  const f=fixture(),home=f.frames[0];
+  f.send(home,{type:'ready'});
+  f.send(home,{type:'navigate',route:'lottery',event:'card-past',ticketStatus:'expired'});
+  const activity=f.frames[1];
+  f.send(home,{type:'navigate',route:'lottery',event:'expert',pool:'advanced',ticketStatus:'unused'});
+  f.send(activity,{type:'ready'});
+  const activation=lastActivation(activity);
+  assert.equal(activation.event,'expert');
+  assert.equal(activation.pool,'advanced');
+  assert.equal(activation.ticketStatus,'unused');
+  assert.equal(f.frames.length,2);
+});

@@ -1,40 +1,34 @@
-import {START,END,DAY,active,dayKey,balances,claimDaily,submitOrder,completeOrder,isEligibleCategory} from './expert-event-model.js';
-import {loadEvent,saveEvent,eventNow,setEventClock,resetEvent} from './expert-event-session.js';
+import {START,active,dayKey,balances,claimDaily,submitOrder,completeOrder,isEligibleCategory} from './expert-event-model.js';
+import {loadEvent,saveEvent,eventNow} from './expert-event-session.js';
 import {machineMarkup,mountMachine,prizeArt} from './capsule-machine.js';
-import {progressMarkup,focusProgress,openDraw,openProgress,openLeaderboard,openRules,showEventDialog,closeEventDialog,eventCount,icon,escapeHtml as esc} from './expert-event-ui.js';
+import {progressMarkup,focusProgress,openActivityHub,openDraw,openProgress,openLeaderboard,openRules,showEventDialog,closeEventDialog,eventCount,icon,escapeHtml as esc} from './expert-event-ui.js';
+import {DEMO_SCENE_GROUPS,applyDemoScene} from './expert-event-demo.js';
 
 const $=id=>document.getElementById(id);
-let homePool='ordinary',homeMachine=null,flow=null,reportId=null,product=null,submitting=false,aiTimer=null;
-const categoryNames='美妆 / 包袋 / 鞋靴 / 服饰 / 手表 / 数码 3C';
+let homeMachine=null,flow=null,reportId=null,product=null,submitting=false,aiTimer=null,lastScene=null;
 const section=document.createElement('section');section.id='expertEvent';section.className='eh-event';
 $('expertHome').append(section);
 
 function renderHome(){
  const s=loadEvent(),now=eventNow(),balance=balances(s,now),n=eventCount(s),enabled=active(now);
  homeMachine?.destroy();
- section.innerHTML=`<div class="eh-section-top"><span class="ev-eyebrow"><i></i> 专鉴有礼 · 限时活动</span><button class="ev-text-button" data-eh="rules">规则 ${icon('arrow')}</button></div>
- <div class="eh-event-title"><div><h2>鉴别每一份热爱<br><em>扭出一份惊喜</em></h2><p>10.27 — 11.10 · 六大品类免费专鉴</p></div><button class="eh-rank-entry" data-eh="ranking">${icon('crown')}<strong>王者榜</strong><span>上榜有礼 ${icon()}</span></button></div>
- <div class="eh-machine-panel">
- <div class="eh-pool-switch"><button data-pool="ordinary" aria-selected="${homePool==='ordinary'}">${icon('ticket')}普通奖池</button><button data-pool="advanced" aria-selected="${homePool==='advanced'}">${icon('crown')}高级奖池</button></div>
- <div class="eh-machine">${machineMarkup({pool:homePool})}</div>
- <div class="eh-prize-caption">${homePool==='advanced'?'YSL 气垫 · COACH · 雷蛇耳机':'美妆小样 · 护肤品小样 · 香水小样'}<span>实物好礼与专家鉴定券</span></div>
- <div class="eh-ticket-balance"><span>${icon('ticket')}可用${homePool==='advanced'?'高级':'普通'}券 <b>${balance[homePool]}</b> 张</span><button data-eh="center">我的抽奖券 ${icon()}</button></div>
- <div class="eh-draw-buttons"><button class="ev-secondary" data-draw="1" ${!enabled||balance[homePool]<1?'disabled':''}><strong>${balance.daily&&homePool==='ordinary'?'免费扭一次':'扭一次'}</strong><small>使用 1 张${homePool==='advanced'?'高级':'普通'}券</small></button><button class="ev-primary ${homePool==='advanced'?'eh-premium-button':''}" data-draw="5" ${!enabled||balance[homePool]<5?'disabled':''}><strong>五次一起扭</strong><small>使用 5 张同种券</small></button></div>
- <div class="eh-daily-note">${icon('clock')} ${!enabled?(now<START?'活动尚未开始':'活动已结束，记录仍可查看'):balance.daily?'今日赠送的 1 张普通券，今天记得用掉':'每天自动领 1 张普通券，当天有效'}</div>
- </div>
- <div class="eh-home-progress">${progressMarkup(s)}</div>
- <button class="ev-primary eh-go-expert" data-eh="expert"><span>${enabled?'限时免费，去专鉴':'免费，去专鉴'}</span>${icon()}</button>
- <p class="eh-scope">${enabled?'每 2 单得普通券，每 10 单得高级券':now<START?'活动开始后，参与品类的专鉴可累计奖励':'活动已结束，仍可免费专鉴'}<br><span>${categoryNames}</span></p>
- <button class="eh-ranking-banner" data-eh="ranking"><span class="eh-medal">${icon('crown')}</span><span><strong>认真鉴别，也能成为王者</strong><small>200 元现金红包 · 终身免费专鉴</small></span>${icon()}</button>
- <div class="eh-footer"><span>交互演示 · ${new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit'}).format(now)}</span><button data-eh="demo">切换演示场景</button></div>`;
+ section.innerHTML=`<div class="eh-campaign">
+ <div class="eh-campaign-top"><span class="eh-event-chip"><i></i> 专鉴有礼</span><button class="eh-rule-button" data-eh="rules">活动规则 ${icon()}</button></div>
+ <div class="eh-campaign-heading"><div><h2>好礼<span>扭出来</span></h2><p>${enabled?'每天一次免费扭蛋':now<START?'10 月 27 日开启':'本期活动已结束'}</p></div>
+ <button class="eh-rank-pill" data-eh="ranking"><span class="eh-rank-spark">${icon('crown')}</span><span>王者榜<small>榜上有礼</small></span>${icon()}</button></div>
+ <button class="eh-machine-display" data-eh="hub" aria-label="打开扭蛋机，选择抽奖券"><div class="eh-machine">${machineMarkup({pool:'advanced',compact:true})}</div></button>
+ <div class="eh-prize-caption"><span>YSL 气垫</span><i></i><span>COACH</span><i></i><span>雷蛇耳机</span></div>
+ <button class="eh-enter-button" data-eh="hub"><span>${enabled?(balance.daily?'免费扭蛋，开启好运':'去扭蛋，开启好运'):'查看抽奖中心'}</span><span class="eh-enter-arrow">${icon()}</span></button>
+ <div class="eh-daily-note">${icon('clock')}${!enabled?(now<START?'活动尚未开始，可查看奖品与规则':'抽奖券已过期，历史记录仍可查看'):balance.daily?'今日免费券已到账 · 仅限今日使用':'每日免费赠券，当天有效'}</div>
+ <div class="eh-pocket"><button data-eh="progress"><span>累计专鉴 <b>${n}</b> 单</span><small>查看进度 ${icon()}</small></button><button data-eh="center"><span>我的抽奖券 <b>${balance.ordinary+balance.advanced}</b></span><small>查看全部 ${icon()}</small></button></div>
+ </div><div class="eh-footer"><span>交互演示 · ${new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit'}).format(now)}</span><button data-eh="demo">${icon('spark')}模拟场景</button></div>`;
  homeMachine=mountMachine(section.querySelector('.gm-machine'));
- section.querySelectorAll('[data-pool]').forEach(b=>b.onclick=()=>{homePool=b.dataset.pool;renderHome();});
- section.querySelectorAll('[data-draw]').forEach(b=>b.onclick=()=>openDraw({pool:homePool,count:Number(b.dataset.draw)}));
  section.querySelectorAll('[data-eh]').forEach(b=>b.onclick=()=>{
   const a=b.dataset.eh;if(a==='rules')openRules();if(a==='ranking')openLeaderboard();
-  if(a==='expert')window.openExpertSelection();if(a==='center')window.jianxNavigate('lottery');if(a==='demo')openDemo();
+  if(a==='hub')openActivityHub();if(a==='progress')openProgress();
+  if(a==='expert')window.openExpertSelection();if(a==='center')window.jianxNavigate('lottery',{event:'expert'});if(a==='demo')openDemo();
  });
- focusProgress(section);if(!window.jianxActive)homeMachine.destroy();
+ if(window.jianxActive===false)homeMachine.destroy();
 }
 function enterEvent({scroll=false}={}){
  const r=claimDaily(loadEvent(),eventNow());if(r.awarded)saveEvent(r.state);else renderHome();
@@ -74,9 +68,10 @@ function renderAI(){
  product={category:'美妆',brand:'圣罗兰 YSL',style:'气垫粉底',name:'圣罗兰 · 气垫粉底'};
  const s=loadEvent(),enabled=active(eventNow());
  flow.querySelector('.eh-flow-body').innerHTML=`<article class="eh-ai-report"><div class="eh-product-top"><span><small>YSL · SAINT LAURENT</small><h2>圣罗兰气垫粉底</h2><p>AI 鉴别报告</p></span>${prizeArt('ysl-cushion')}</div><div class="eh-ai-verdict"><span>${icon('shield')} 正品特征</span><b>75.3<small>%</small></b><p>AI 把握度 · 演示结果</p><div><i></i></div></div><p class="eh-ai-desc">当前图片的包装、标识与工艺呈现正品特征。进一步确认，建议交由专家结合更多细节综合鉴别。</p><div class="eh-ai-metrics"><span>图片完整度 <b>73.2%</b></span><span>已观察点位 <b>4 个</b></span></div></article>
- <article class="eh-convert-card"><div class="eh-convert-glow"></div><div class="eh-convert-top"><span class="eh-expert-badge">${icon('shield')}</span><div><span class="ev-eyebrow">更进一步，交给专业</span><h2>专家一对一鉴别</h2></div><span class="eh-free-badge">${enabled?'限时':'专鉴'}<br><b>免费</b></span></div><p>专家复核关键细节，为你的选择多一份依据。</p>${enabled?`<div class="eh-benefits"><span>${icon('gift')}专鉴还可抽好礼</span><span>2 单得券 · 10 单升级</span></div>${progressMarkup(s,{compact:true})}`:''}<button class="ev-primary" data-ai-expert>${enabled?'免费专鉴，继续攒好运':'免费专鉴'} ${icon()}</button><small class="eh-convert-scope">${enabled?'本活动限美妆、包袋、鞋靴、服饰、手表、数码 3C':eventNow()<START?'专鉴有礼活动尚未开始，当前仍可免费专鉴':'专鉴有礼活动已结束，仍可免费专鉴'}</small></article>
+ <article class="eh-convert-card"><div class="eh-convert-glow"></div><div class="eh-convert-top"><span class="eh-expert-badge">${icon('shield')}</span><div><span class="ev-eyebrow">更进一步，交给专业</span><h2>专家一对一鉴别</h2></div><span class="eh-free-badge">${enabled?'限时':'专鉴'}<br><b>免费</b></span></div><p>专家复核关键细节，为你的选择多一份依据。</p>${enabled?`<div class="eh-benefits"><span>${icon('gift')}专鉴还可抽好礼</span><button class="ev-text-button" data-ai-rules>活动规则 ${icon()}</button></div>${progressMarkup(s)}`:''}<button class="ev-primary" data-ai-expert>${enabled?'免费专鉴，继续攒好运':'免费专鉴'} ${icon()}</button>${enabled?'':`<small class="eh-convert-scope">${eventNow()<START?'专鉴有礼活动尚未开始，当前仍可免费专鉴':'专鉴有礼活动已结束，仍可免费专鉴'}</small>`}</article>
  <p class="ev-demo-note">当前结果为流程演示，不构成真实鉴定结论。</p>`;
  flow.querySelector('[data-ai-expert]').onclick=()=>openUpload(product);
+ flow.querySelector('[data-ai-rules]')?.addEventListener('click',()=>openRules());
  focusProgress(flow);
 }
 function openUpload(selection={}){
@@ -112,20 +107,29 @@ function renderReport(){
  });
  flow.querySelector('[data-next-order]').onclick=()=>window.openExpertSelection();focusProgress(flow);
 }
+function runDemoScene(id,options={}){
+ closeEventDialog();closeFlow();lastScene={id,options:{...options}};
+ const scene=applyDemoScene(id,options);
+ window.jianxSetTab?.('expert');renderHome();
+ if(scene.destination==='progress')openProgress({reward:scene.reward});
+ else if(scene.destination==='draw')openDraw({pool:scene.pool,count:scene.count,random:scene.random});
+ else if(scene.destination==='ranking')openLeaderboard(scene.rankingKind);
+ else if(scene.destination==='upload')openUpload(scene.selection);
+ else if(scene.destination==='lottery')window.jianxNavigate?.('lottery',{event:scene.event,pool:scene.pool,ticketStatus:scene.ticketStatus});
+ else enterEvent();
+ if(scene.notice)showEventDialog('每日赠券',`<div class="eh-day-notice"><img src="assets/gacha/reward-ordinary.png" alt="普通抽奖券"><h2>${esc(scene.notice)}</h2><p>每日赠券仅限当天使用，活动获得的里程碑券可保留至活动结束。</p><button class="ev-primary" data-day-hub>去扭蛋 ${icon()}</button></div>`).querySelector('[data-day-hub]').onclick=()=>openActivityHub();
+}
+function openDrawSetup(){
+ const options=[['random','自然随机'],['physical','抽中实物'],['voucher','抽中鉴定券'],['none','再接再厉'],['mixed','五连混合结果']];
+ const d=showEventDialog('配置抽奖演示',`<form class="eh-demo-form"><label>抽奖券种<select name="pool"><option value="ordinary">普通抽奖券</option><option value="advanced">高级抽奖券</option></select></label><label>扭蛋次数<select name="count"><option value="1">单次扭蛋</option><option value="5">五次一起扭</option></select></label><label>演示结果<select name="outcome">${options.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select></label><p>会自动准备对应抽奖券。指定结果仅用于本次演示，重播时恢复同一场景。</p><button class="ev-primary" type="submit">开始演示 ${icon()}</button></form>`);
+ const form=d.querySelector('form');form.querySelector('[name="outcome"]').onchange=event=>{if(event.target.value==='mixed')form.querySelector('[name="count"]').value='5';};
+ form.onsubmit=event=>{event.preventDefault();const data=new FormData(form);const options={pool:data.get('pool'),count:Number(data.get('count')),outcome:data.get('outcome')};if(options.outcome==='mixed')options.count=5;runDemoScene('draw',options);};
+}
 function openDemo(){
- const d=showEventDialog('切换演示场景',`<div class="eh-demo-options"><p>选择场景体验不同的进度与状态。操作只影响当前浏览器的演示记录。</p>${[['new','重新体验首次免费'],['9','累计 9 单 · 下一单解锁高级券'],['14','累计 14 单 · 查看历史里程碑'],['50','累计 50 单 · 体验高级五连抽'],['next','模拟次日 · 检查每日赠券'],['end','活动结束 · 查看过期状态']].map(([key,label])=>`<button data-scene="${key}">${label}${icon()}</button>`).join('')}</div>`);
- d.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>{
-  d.close();const mode=b.dataset.scene;
-  if(mode==='new'){resetEvent();enterEvent({scroll:true});return;}
-  if(mode==='next'){setEventClock(eventNow()+DAY);enterEvent();return;}
-  if(mode==='end'){setEventClock(END+1000);renderHome();return;}
-  resetEvent();let s=loadEvent();s=claimDaily(s,eventNow()).state;
-  const sceneNow=eventNow();
-  for(let i=0;i<Number(mode);i++){const at=sceneNow-(Number(mode)-i)*1000;const r=submitOrder(s,{id:`scenario-${mode}-${i}`,category:'美妆',product:'圣罗兰 · 气垫粉底'},at);s=r.state;if(i%3!==2)s=completeOrder(s,r.order.id,i%3===0?'true':'false',at+500).state;}
-  // Clear only the demo introduction ticket for a milestone-focused scenario.
-  const daily=s.tickets.find(t=>t.sourceKey==='daily');if(daily)daily.remaining=0;
-  saveEvent(s);renderHome();section.scrollIntoView({behavior:'smooth',block:'start'});
- });
+ const d=showEventDialog('模拟场景',`<div class="eh-demo-options"><p>一键进入场景，直接演示进度、动画与结果。仅切换当前浏览器的演示数据。</p><div class="eh-demo-tools"><button data-replay ${lastScene?'':'disabled'}>重播当前场景</button><button data-reset>恢复初始状态</button></div>${DEMO_SCENE_GROUPS.map(group=>`<section class="eh-scene-group"><h3>${esc(group.label)}</h3><div>${group.scenes.map(scene=>`<button data-scene="${scene.id}"><strong>${esc(scene.label)}</strong><small>${esc(scene.description)}</small>${icon()}</button>`).join('')}</div></section>`).join('')}</div>`,{className:'eh-demo-dialog'});
+ d.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>b.dataset.scene==='draw'?openDrawSetup():runDemoScene(b.dataset.scene));
+ d.querySelector('[data-replay]').onclick=()=>{if(lastScene)runDemoScene(lastScene.id,lastScene.options);};
+ d.querySelector('[data-reset]').onclick=()=>runDemoScene('first');
 }
 // Defer tab entry until the shell's intent handler has opened a picker or upload flow.
 window.addEventListener('expert-tab-open',()=>queueMicrotask(()=>{if(eventHomeVisible())enterEvent();}));

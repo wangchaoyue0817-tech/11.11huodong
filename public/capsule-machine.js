@@ -40,17 +40,17 @@ export function prizeArt(id, {className = ''} = {}) {
 }
 
 const BALLS = [
-  {x: 13, y: 13, size: 26, turn: -18, color: 'lilac'},
-  {x: 43, y: 4, size: 28, turn: 12, color: 'cyan'},
-  {x: 69, y: 19, size: 26, turn: 23, color: 'blue'},
-  {x: 2, y: 41, size: 28, turn: -30, color: 'blue'},
-  {x: 34, y: 37, size: 30, turn: -8, color: 'violet'},
-  {x: 68, y: 53, size: 27, turn: 22, color: 'lilac'},
-  {x: 15, y: 68, size: 25, turn: 15, color: 'cyan'},
-  {x: 44, y: 67, size: 27, turn: -18, color: 'gold'},
-  {x: 72, y: 0, size: 13, turn: 26, color: 'violet'},
-  {x: 2, y: 6, size: 13, turn: -7, color: 'gold'},
-  {x: 47, y: 26, size: 15, turn: 36, color: 'blue'},
+  {x: 7, y: 8, size: 24, turn: -18, color: 'lilac'},
+  {x: 37, y: 3, size: 25, turn: 12, color: 'cyan'},
+  {x: 65, y: 7, size: 25, turn: 23, color: 'blue'},
+  {x: 0, y: 49, size: 25, turn: -30, color: 'blue'},
+  {x: 24, y: 42, size: 26, turn: -8, color: 'violet'},
+  {x: 50, y: 48, size: 24, turn: 22, color: 'lilac'},
+  {x: 75, y: 46, size: 24, turn: 15, color: 'cyan'},
+  {x: 45, y: 28, size: 24, turn: -18, color: 'gold'},
+  {x: 87, y: 5, size: 11, turn: 26, color: 'violet'},
+  {x: 0, y: 3, size: 12, turn: -7, color: 'gold'},
+  {x: 21, y: 3, size: 12, turn: 36, color: 'blue'},
 ];
 const POOL_ART = {
   ordinary: {
@@ -78,29 +78,17 @@ export function machineMarkup({pool = 'ordinary', compact = false} = {}) {
     <div class="gm-aura" aria-hidden="true"></div>
     <div class="gm-floor" aria-hidden="true"></div>
     <div class="gm-device">
-      <div class="gm-crown" aria-hidden="true"><span class="gm-crown-line"></span><span class="gm-crown-orbit"></span><span class="gm-crown-gem"></span></div>
-      <div class="gm-head">
-        <span class="gm-bolt gm-bolt--left"></span><span class="gm-bolt gm-bolt--right"></span>
-        <div class="gm-marquee"><span class="gm-marquee-spark">✦</span><strong class="gm-pool-title">${tier === 'premium' ? '高级好礼' : '扭出惊喜'}</strong><span class="gm-marquee-spark">✦</span></div>
-        <div class="gm-showcase" aria-hidden="true">${showcaseMarkup(tier)}</div>
-        <div class="gm-running-light" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      </div>
-      <div class="gm-side gm-side--left" aria-hidden="true"><span></span><i></i></div>
-      <div class="gm-side gm-side--right" aria-hidden="true"><span></span><i></i></div>
+      <img class="gm-body-art" src="assets/gacha/machine-body-v2.png" alt="" aria-hidden="true" draggable="false" decoding="async">
       <div class="gm-chamber" aria-hidden="true">
-        <div class="gm-chamber-back"><span class="gm-back-orbit"></span><span class="gm-back-grid"></span><span class="gm-back-spark gm-back-spark--a"></span><span class="gm-back-spark gm-back-spark--b"></span></div>
+        <div class="gm-chamber-back"><span class="gm-back-orbit"></span><span class="gm-back-spark gm-back-spark--a"></span><span class="gm-back-spark gm-back-spark--b"></span></div>
         <div class="gm-balls">${ballsMarkup(tier)}</div>
         <div class="gm-glass"></div><div class="gm-chamber-floor"></div>
       </div>
-      <div class="gm-chamber-rim" aria-hidden="true"></div>
-      <div class="gm-base">
-        <span class="gm-base-trim" aria-hidden="true"></span>
-        <div class="gm-dial" aria-hidden="true"><span class="gm-dial-ring"></span><span class="gm-dial-handle"></span><span class="gm-dial-center"></span></div>
-        <div class="gm-delivery" aria-hidden="true"><span class="gm-door"></span><span class="gm-delivery-light"></span><div class="gm-dispensed">${Array.from({length: 5}, (_, i) => `<span class="gm-drop-ball gm-drop-ball--${i}" style="--gm-drop-i:${i}"><i></i></span>`).join('')}</div></div>
-        <span class="gm-base-light gm-base-light--left" aria-hidden="true"></span><span class="gm-base-light gm-base-light--right" aria-hidden="true"></span>
-        <span class="gm-device-label">每一份认真，都值得惊喜</span>
-      </div>
-      <div class="gm-plinth" aria-hidden="true"><span></span></div>
+      <div class="gm-marquee"><span class="gm-marquee-spark"></span><strong class="gm-pool-title">${tier === 'premium' ? '高级好礼' : '扭出惊喜'}</strong><span class="gm-marquee-spark"></span></div>
+      <div class="gm-showcase" aria-hidden="true">${showcaseMarkup(tier)}</div>
+      <div class="gm-dial" aria-hidden="true"><span class="gm-dial-ring"></span><span class="gm-dial-handle"></span><span class="gm-dial-center"></span></div>
+      <div class="gm-delivery" aria-hidden="true"><span class="gm-door"></span><span class="gm-delivery-light"></span><div class="gm-dispensed">${Array.from({length: 5}, (_, i) => `<span class="gm-drop-ball gm-drop-ball--${i}" style="--gm-drop-i:${i}"><i></i></span>`).join('')}</div></div>
+      <div class="gm-running-light" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     </div>
     <span class="gm-live" role="status" aria-live="polite"></span>
   </div>`;

@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDocument} from './dom-fixture.mjs';
-import {START,END,VOUCHER_END,fresh,submitOrder} from '../public/expert-event-model.js';
-import {eventCount,progressMarkup,resultMarkup} from '../public/expert-event-ui.js';
+import {START,END,VOUCHER_END,fresh,submitOrder,claimDaily} from '../public/expert-event-model.js';
+import {loadEvent,saveEvent,setEventClock} from '../public/expert-event-session.js';
+import {
+  eventCount,progressGeometry,progressMarkup,focusProgress,resultMarkup,activityHubMarkup,
+  rankingState,openActivityHub,openDraw,closeEventDialog,openRules,openProgress
+} from '../public/expert-event-ui.js';
 
 const T=START+10*3600000;
 function orders(count) {
@@ -11,6 +15,45 @@ function orders(count) {
   return state;
 }
 const view=html=>createDocument(`<main>${html}</main>`);
+function dialogHarness(t,state=orders(14)) {
+  const document=createDocument('<body><button id="previous">活动入口</button></body>');
+  const createElement=document.createElement.bind(document);
+  document.createElement=tag=>{
+    const element=createElement(tag);
+    if(tag==='dialog') {
+      element.showModal=()=>{element.open=true;};
+      element.close=(reason='')=>{
+        if(!element.open)return;
+        element.open=false;element.returnValue=reason;
+        element.dispatchEvent({type:'close',bubbles:false});
+      };
+      element.remove=()=>{
+        if(element.parentElement)element.parentElement.nodes=element.parentElement.nodes.filter(node=>node!==element);
+        element.parentElement=null;
+      };
+    }
+    return element;
+  };
+  const storage=new Map(),window=new EventTarget(),navigations=[];
+  window.jianxNavigate=(...args)=>navigations.push(args);
+  const replacements={
+    document,window,
+    localStorage:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)},
+    requestAnimationFrame:callback=>callback(),
+    matchMedia:()=>({matches:true})
+  };
+  const previous=new Map(Object.keys(replacements).map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+  for(const [key,value]of Object.entries(replacements))Object.defineProperty(globalThis,key,{value,writable:true,configurable:true});
+  setEventClock(T+1000);saveEvent(state);
+  t.after(()=>{
+    closeEventDialog();
+    for(const [key,descriptor]of previous) {
+      if(descriptor)Object.defineProperty(globalThis,key,descriptor);
+      else delete globalThis[key];
+    }
+  });
+  return {document,window,navigations,dialog:()=>document.querySelector('dialog')};
+}
 
 test('14 submitted orders display their real cumulative count and keep earlier milestones available',()=>{
   const state=orders(14),document=view(progressMarkup(state));
@@ -103,4 +146,189 @@ test('five blanks do not become a five-prize celebration',()=>{
   assert.equal(document.querySelector('h2').textContent,'再接再厉');
   assert.equal(document.querySelectorAll('.ev-result-card.is-empty').length,5);
   assert.doesNotMatch(document.querySelector('.ev-result-heading').textContent,/好礼已抵达/);
+});
+
+test('rail geometry uses actual count, including odd counts, and preserves all fifty-order history',()=>{
+  for(const [count,end,ratio,next] of [[0,10,0,2],[9,20,.45,10],[14,20,.7,16],[50,60,5/6,52]]) {
+    const geometry=progressGeometry(count);
+    assert.equal(geometry.end,end);
+    assert.equal(geometry.ratio,ratio);
+    assert.equal(geometry.next,next);
+    assert.equal(geometry.nodeCount,end/2+1);
+    const document=view(progressMarkup(orders(count)));
+    const rail=document.querySelector('[role="progressbar"]');
+    assert.equal(rail.getAttribute('aria-valuenow'),String(count));
+    assert.equal(rail.getAttribute('aria-valuemax'),String(end));
+    assert.equal(document.querySelector('.ev-current-marker').dataset.currentCount,String(count));
+    assert.equal(document.querySelectorAll('[data-step]').length,end/2);
+    assert.match(document.querySelector('.ev-progress-heading').textContent,/我的专鉴进度/);
+    assert.doesNotMatch(document.querySelector('.ev-progress-heading').textContent,/专鉴有礼/);
+  }
+  const fifty=view(progressMarkup(orders(50)));
+  assert.equal(fifty.querySelector('[data-step="2"]').classList.contains('is-done'),true);
+  assert.equal(fifty.querySelector('[data-step="50"]').classList.contains('is-done'),true);
+  assert.equal(fifty.querySelector('[data-step="52"]').classList.contains('is-next'),true);
+});
+
+test('both progress sizes use dimensional ordinary and gold artwork with explicit reward states',()=>{
+  for(const compact of [false,true]) {
+    const document=view(progressMarkup(orders(9),{compact}));
+    assert.equal(document.querySelector('[data-step="2"] img').getAttribute('src'),'assets/gacha/reward-ordinary.png');
+    assert.equal(document.querySelector('[data-step="10"] img').getAttribute('src'),'assets/gacha/reward-advanced.png');
+    assert.equal(document.querySelector('[data-step="8"] .ev-node-state').textContent,'已获得');
+    assert.equal(document.querySelector('[data-step="10"] .ev-node-state').textContent,'下一奖励');
+    assert.equal(document.querySelector('[data-step="12"] .ev-node-state').textContent,'待解锁');
+    assert.equal(document.querySelectorAll('[data-step="10"]').length,1);
+    assert.equal(document.querySelector('[data-step="10"] small').textContent,'高级券');
+  }
+});
+
+test('focusProgress centers the actual marker using viewport coordinates rather than a nested offset',t=>{
+  const {document}=dialogHarness(t);
+  document.body.innerHTML=progressMarkup(orders(50));
+  const scroll=document.querySelector('.ev-milestone-scroll');
+  const marker=document.querySelector('.ev-current-marker');
+  scroll.scrollLeft=120;scroll.clientWidth=300;
+  scroll.getBoundingClientRect=()=>({left:30});
+  marker.getBoundingClientRect=()=>({left:1800,width:0});
+  focusProgress(document);
+  assert.equal(scroll.scrollLeft,1755);
+  assert.equal(document.querySelector('[data-step="2"]').classList.contains('is-done'),true);
+});
+
+test('hub keeps separate balances, full progress, daily expiry and single versus five availability',()=>{
+  const state=claimDaily(orders(10),T+1000).state,before=structuredClone(state);
+  const ordinary=view(activityHubMarkup(state,T+1000,{pool:'ordinary'}));
+  assert.equal(ordinary.querySelector('[data-hub-pool="ordinary"]').getAttribute('aria-selected'),'true');
+  assert.match(ordinary.querySelector('[data-hub-pool="ordinary"]').textContent,/可用\s*5\s*张券/);
+  assert.match(ordinary.querySelector('[data-hub-pool="advanced"]').textContent,/可用\s*1\s*张券/);
+  assert.equal(ordinary.querySelector('[data-hub-draw="5"]').disabled,false);
+  assert.match(ordinary.querySelector('[data-hub-draw="1"]').textContent,/免费扭一次/);
+  assert.match(ordinary.querySelector('.ev-hub-expiry').textContent,/今日赠券当天有效/);
+  assert.equal(ordinary.querySelector('.ev-progress').dataset.current,'10');
+  const advanced=view(activityHubMarkup(state,T+1000,{pool:'advanced'}));
+  assert.equal(advanced.querySelector('[data-hub-draw="1"]').disabled,false);
+  assert.equal(advanced.querySelector('[data-hub-draw="5"]').disabled,true);
+  assert.match(advanced.querySelector('[data-hub-draw="1"]').textContent,/高级券/);
+  assert.doesNotMatch(advanced.querySelector('[data-hub-draw="1"]').textContent,/免费扭一次/);
+  assert.deepEqual(state,before);
+});
+
+test('hub disables both draw buttons outside the activity without removing saved progress',()=>{
+  const state=orders(50);
+  for(const [now,text]of [[START-1,'活动尚未开始'],[END,'活动已结束']]) {
+    const document=view(activityHubMarkup(state,now,{pool:'advanced'}));
+    assert.equal(document.querySelector('[data-hub-draw="1"]').disabled,true);
+    assert.equal(document.querySelector('[data-hub-draw="5"]').disabled,true);
+    assert.match(document.querySelector('.ev-hub-expiry').textContent,new RegExp(text));
+    assert.equal(document.querySelector('.ev-progress').dataset.current,'50');
+  }
+});
+
+test('explicit ranking scenarios remain intact without the generic leaderboard fixture',()=>{
+  const state={...orders(2),demoRanking:true,users:[{uid:'current-user',username:'陈**7'}]};
+  assert.equal(rankingState(state),state);
+  assert.equal(rankingState(state).orders.length,2);
+  assert.deepEqual(rankingState(state).users,[{uid:'current-user',username:'陈**7'}]);
+});
+
+test('opening and switching hub pools preserves the scenario state and current progress',t=>{
+  const state=orders(50),{dialog}=dialogHarness(t,state);
+  openActivityHub();
+  dialog().querySelector('[data-hub-pool="advanced"]').click();
+  assert.equal(dialog().querySelector('[data-hub-pool="advanced"]').getAttribute('aria-selected'),'true');
+  assert.equal(dialog().querySelector('.ev-progress').dataset.current,'50');
+  assert.deepEqual(loadEvent(),state);
+  dialog().querySelector('[data-hub-rules]').click();
+  assert.equal(dialog().getAttribute('aria-label'),'专鉴有礼 · 活动规则');
+  dialog().querySelector('[data-ev-close]').click();
+  assert.equal(dialog().querySelector('[data-hub-pool="advanced"]').getAttribute('aria-selected'),'true');
+  assert.deepEqual(loadEvent(),state);
+});
+
+test('an explicitly supplied draw generator produces one saved result and skipping never debits twice',t=>{
+  const {dialog}=dialogHarness(t,orders(10));
+  let changes=0,returns=0,randomCalls=0;
+  const batch=openDraw({pool:'advanced',count:1,onChange:()=>changes++,onReturn:()=>returns++,random:()=>{randomCalls++;return .4;}});
+  assert.equal(batch.rewards[0].type,'voucher');
+  assert.equal(changes,1);
+  assert.equal(randomCalls,1);
+  assert.equal(loadEvent().draws.length,1);
+  const skip=dialog().querySelector('[data-skip]');
+  skip.click();skip.click();
+  assert.equal(dialog().querySelectorAll('.ev-result-card').length,1);
+  assert.equal(loadEvent().draws.length,1);
+  assert.equal(loadEvent().tickets.filter(ticket=>ticket.pool==='advanced').reduce((sum,ticket)=>sum+ticket.remaining,0),0);
+  dialog().querySelector('[data-result-back]').click();
+  assert.equal(returns,1);
+  assert.equal(dialog(),null);
+});
+
+test('dismissed hub draw returns to its selected pool without drawing again',t=>{
+  const {dialog}=dialogHarness(t,orders(20));
+  openActivityHub({pool:'advanced'});
+  dialog().querySelector('[data-hub-draw="1"]').click();
+  assert.match(dialog().getAttribute('aria-label'),/高级扭蛋/);
+  assert.equal(loadEvent().draws.length,1);
+  dialog().querySelector('[data-skip]').click();
+  dialog().querySelector('[data-result-back]').click();
+  assert.equal(dialog().querySelector('[data-hub-pool="advanced"]').getAttribute('aria-selected'),'true');
+  assert.equal(dialog().querySelector('.ev-progress').dataset.current,'20');
+  assert.equal(loadEvent().draws.length,1);
+});
+
+test('programmatic replacement does not reopen a hub and navigation leaves the modal closed',t=>{
+  const {dialog,navigations}=dialogHarness(t,orders(20));
+  let returns=0;
+  openDraw({pool:'advanced',onReturn:()=>returns++,random:()=>.4});
+  openRules();
+  assert.equal(returns,0);
+  assert.equal(dialog().getAttribute('aria-label'),'专鉴有礼 · 活动规则');
+  openActivityHub({pool:'advanced'});
+  dialog().querySelector('[data-hub-prizes]').click();
+  assert.equal(dialog(),null);
+  assert.deepEqual(navigations,[['prizes',{event:'expert',pool:'advanced'}]]);
+  assert.equal(returns,0);
+});
+
+test('progress center entry always restores expert activity with the earned pool or ordinary fallback',t=>{
+  const {dialog,navigations}=dialogHarness(t,orders(20));
+  for(const reward of [null,{pool:'ordinary'},{pool:'advanced'}]) {
+    openProgress({reward});
+    dialog().querySelector('[data-center]').click();
+    assert.equal(dialog(),null);
+  }
+  assert.deepEqual(navigations,[
+    ['lottery',{event:'expert',pool:'ordinary'}],
+    ['lottery',{event:'expert',pool:'ordinary'}],
+    ['lottery',{event:'expert',pool:'advanced'}]
+  ]);
+});
+
+test('draw result prize entry explicitly selects the expert activity and the drawn pool',t=>{
+  const {dialog,navigations}=dialogHarness(t,orders(20));
+  for(const pool of ['ordinary','advanced']) {
+    openDraw({pool,random:()=>.4});
+    dialog().querySelector('[data-skip]').click();
+    dialog().querySelector('[data-result-prizes]').click();
+    assert.equal(dialog(),null);
+  }
+  assert.deepEqual(navigations,[
+    ['prizes',{event:'expert',pool:'ordinary'}],
+    ['prizes',{event:'expert',pool:'advanced'}]
+  ]);
+});
+
+test('hub prize and record entries carry the currently selected pool instead of stale card context',t=>{
+  const {dialog,navigations}=dialogHarness(t,orders(20));
+  for(const [button,route] of [['data-hub-prizes','prizes'],['data-hub-center','lottery']]) {
+    for(const pool of ['advanced','ordinary']) {
+      openActivityHub({pool:pool==='advanced'?'ordinary':'advanced'});
+      dialog().querySelector(`[data-hub-pool="${pool}"]`).click();
+      dialog().querySelector(`[${button}]`).click();
+      assert.equal(dialog(),null);
+      assert.deepEqual(navigations.at(-1),[route,{event:'expert',pool}]);
+    }
+  }
+  assert.equal(navigations.length,4);
 });

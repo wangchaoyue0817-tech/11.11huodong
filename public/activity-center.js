@@ -36,6 +36,19 @@ export function eligibleOrderCount(state) {
   return (state.orders || []).filter(order => order.uid === state.uid && order.eligible !== false && active(order.at) && (EventModel.isEligibleCategory ? EventModel.isEligibleCategory(order.category) : eligibleNames.includes(order.category))).length;
 }
 
+export function resolveActivityNavigation(current, message = {}) {
+  const next = {...current};
+  if(['expert','card-past','card-next'].includes(message.event)){
+    next.currentEvent = message.event;
+    next.ticketStatus = message.event === 'card-past' ? 'expired' : 'unused';
+    next.detailTab = 'tickets';
+    next.prizeFilter = 'all';
+  }
+  if(['ordinary','advanced'].includes(message.pool))next.selectedPool = message.pool;
+  if(['unused','used','expired'].includes(message.ticketStatus))next.ticketStatus = message.ticketStatus;
+  return next;
+}
+
 export function recordMarkup(batch, prizes = PRIZES) {
   const rewards = batch.rewards || [];
   const label = `${poolName(batch.pool)} · ${rewards.length === 5 ? '五连扭蛋' : '单次扭蛋'}`;
@@ -313,8 +326,9 @@ async function boot() {
     if(message.type === 'visibility' && !message.active){if($('ac-dialog').open)closeModal();return;}
     if(message.type === 'visibility' && message.active){claimForToday();scheduleRender();}
     if(message.type !== 'activate')return;
-    if(['expert','card-past','card-next'].includes(message.event))currentEvent = message.event;
-    if(['ordinary','advanced'].includes(message.pool))selectedPool = message.pool;
+    ({currentEvent,selectedPool,ticketStatus,detailTab,prizeFilter} = resolveActivityNavigation(
+      {currentEvent,selectedPool,ticketStatus,detailTab,prizeFilter},message
+    ));
     claimForToday();
     navigate(message.route,false);
     if(message.route === 'ranking')handleAction('ranking');

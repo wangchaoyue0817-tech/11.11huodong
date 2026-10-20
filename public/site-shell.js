@@ -12,12 +12,19 @@ function activate(route,extra={}){
   else {frame.hidden=false;if(ready.has(module))send(frame,message);else pending.set(module,message);}
 }
 function navigate(route,extra={}){if(!routes[route])return;if(location.hash!=='#'+route)history.pushState({route},'',`#${route}`);activate(route,extra);}
+function navigationExtras(message){
+  const extra={intent:message.intent,...(message.photo?{photo:message.photo}:{})};
+  if(['expert','card-past','card-next'].includes(message.event))extra.event=message.event;
+  if(['ordinary','advanced'].includes(message.pool))extra.pool=message.pool;
+  if(['unused','used','expired'].includes(message.ticketStatus))extra.ticketStatus=message.ticketStatus;
+  return extra;
+}
 window.addEventListener('message',event=>{
   if(event.origin!==location.origin||event.data?.channel!=='jianx-module')return;
   const entry=[...frames].find(([,frame])=>frame.contentWindow===event.source);if(!entry)return;
   const [module,frame]=entry, message=event.data;
   if(message.type==='ready'){ready.add(module);const next=pending.get(module);pending.delete(module);if(routes[current]===module){send(frame,next||{type:'activate',route:current});document.getElementById('site-loading').hidden=true;}send(frame,{type:'visibility',active:routes[current]===module});}
-  if(message.type==='navigate')navigate(message.route,{intent:message.intent,...(message.photo?{photo:message.photo}:{})});
+  if(message.type==='navigate')navigate(message.route,navigationExtras(message));
   if(message.type==='route'&&routes[current]===module&&routes[message.route]===module){current=message.route;history.replaceState({route:current},'',`#${current}`);document.title=`图灵鉴 X · ${titles[current]}`;}
   if(message.type==='new-chat'){for(const other of frames.values())send(other,{type:'reset-chat'});navigate('home',{intent:'new-chat'});}
 });

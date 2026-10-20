@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {earnedPrizes,eligibleOrderCount,recordMarkup,legacyFixture,readLegacy,legacyInventory,ticketRows,prizeMarkup,escapeHTML} from '../public/activity-center.js';
+import {earnedPrizes,eligibleOrderCount,recordMarkup,legacyFixture,readLegacy,legacyInventory,ticketRows,prizeMarkup,escapeHTML,resolveActivityNavigation} from '../public/activity-center.js';
 import {START,END,VOUCHER_END,fresh,claimDaily,submitOrder,draw,ticketInventory} from '../public/expert-event-model.js';
 import {fresh as oldFresh,START as OLD_START,END as OLD_END,welcome as oldWelcome,draw as oldDraw} from '../public/lottery-model.js';
 
@@ -125,4 +125,35 @@ test('multi-event center loads shared draw UI and exposes no historical draw act
   assert.match(source,/卡牌下一期/);
   assert.match(html,/site-bridge\.js/);
   assert.match(html,/capsule-machine\.css/);
+});
+
+test('card history activation defaults to expired tickets and resets stale detail views',()=>{
+  const original={currentEvent:'expert',selectedPool:'advanced',ticketStatus:'unused',detailTab:'records',prizeFilter:'physical'};
+  const next=resolveActivityNavigation(original,{event:'card-past'});
+  assert.deepEqual(next,{
+    currentEvent:'card-past',selectedPool:'advanced',ticketStatus:'expired',detailTab:'tickets',prizeFilter:'all'
+  });
+  assert.equal(original.detailTab,'records');
+  assert.equal(original.currentEvent,'expert');
+});
+
+test('explicit scene ticket filters override campaign defaults, including ended expert tickets',()=>{
+  const current={currentEvent:'card-past',selectedPool:'ordinary',ticketStatus:'expired',detailTab:'rules',prizeFilter:'voucher'};
+  for(const ticketStatus of ['unused','used','expired']) {
+    const next=resolveActivityNavigation(current,{event:'expert',pool:'advanced',ticketStatus});
+    assert.equal(next.currentEvent,'expert');
+    assert.equal(next.selectedPool,'advanced');
+    assert.equal(next.ticketStatus,ticketStatus);
+    assert.equal(next.detailTab,'tickets');
+    assert.equal(next.prizeFilter,'all');
+  }
+  assert.equal(resolveActivityNavigation(current,{event:'card-next'}).ticketStatus,'unused');
+});
+
+test('activity activation ignores invalid selectors and preserves existing view without an explicit campaign',()=>{
+  const current={currentEvent:'expert',selectedPool:'ordinary',ticketStatus:'used',detailTab:'records',prizeFilter:'voucher'};
+  assert.deepEqual(resolveActivityNavigation(current,{event:'retired',pool:'welcome',ticketStatus:'all'}),current);
+  assert.deepEqual(resolveActivityNavigation(current,{route:'prizes'}),current);
+  assert.equal(resolveActivityNavigation(current,{pool:'advanced'}).selectedPool,'advanced');
+  assert.equal(resolveActivityNavigation(current,{ticketStatus:'expired'}).ticketStatus,'expired');
 });
