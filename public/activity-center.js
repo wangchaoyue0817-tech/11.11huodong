@@ -2,7 +2,13 @@ import * as EventModel from './expert-event-model.js';
 import {loadEvent, saveEvent, eventNow} from './expert-event-session.js';
 import {PRIZES as CARD_PRIZES, END as CARD_END, START as CARD_START, validateAddress} from './lottery-model.js';
 import {ticketInventory as cardTicketInventory} from './ticket-inventory.js';
-import {prizeArt} from './capsule-machine.js';
+import {prizeArt,mountMachine} from './capsule-machine.js';
+import {activityChoiceMarkup,expertLotteryMarkup,cardLotteryMarkup} from './center-lottery.js';
+import {unifiedPrizesMarkup,batchResultMarkup} from './center-prizes.js';
+import {ticketHistory,prizePool} from './center-pages.js';
+import {rulesMarkup} from './reward-ui.js';
+import * as EventUI from './expert-event-ui.js';
+export {prizeMarkup} from './center-prizes.js';
 
 const {START, END, VOUCHER_END, PRIZES, active, balances, claimDaily, ticketInventory} = EventModel;
 const CARD_KEY = 'jianx-card-preview-v1';
@@ -39,23 +45,18 @@ export function eligibleOrderCount(state) {
 export function resolveActivityNavigation(current, message = {}) {
   const next = {...current};
   if(['expert','card-past','card-next'].includes(message.event)){
-    next.currentEvent = message.event;
-    next.ticketStatus = message.event === 'card-past' ? 'expired' : 'unused';
+    next.currentEvent = message.event === 'card-next' ? 'card-past' : message.event;
+    next.ticketStatus = 'unused';
     next.detailTab = 'tickets';
     next.prizeFilter = 'all';
-  }
+  } else if(message.route === 'lottery' && !message.event) next.currentEvent = null;
   if(['ordinary','advanced'].includes(message.pool))next.selectedPool = message.pool;
   if(['unused','used','expired'].includes(message.ticketStatus))next.ticketStatus = message.ticketStatus;
   return next;
 }
 
 export function recordMarkup(batch, prizes = PRIZES) {
-  const rewards = batch.rewards || [];
-  const label = `${poolName(batch.pool)} · ${rewards.length === 5 ? '五连扭蛋' : '单次扭蛋'}`;
-  return `<article class="ac-record-group"><header class="ac-record-head"><strong>${label}</strong><small>${time(batch.at)}</small></header><div class="ac-record-prizes">${rewards.map(reward => {
-    const title = reward.type === 'none' ? '再接再厉' : reward.type === 'voucher' ? '专家鉴定券' : prizes.find(prize => prize.id === reward.prizeId)?.name || reward.name || '实物奖品';
-    return `<div class="ac-record-item is-${escapeHTML(reward.type)}">${icon(reward.type === 'physical' ? 'gift' : reward.type === 'none' ? 'none' : 'ticket')}<span>${escapeHTML(title)}</span><small>${reward.type === 'none' ? '未中奖' : '× 1'}</small></div>`;
-  }).join('')}</div></article>`;
+  return batchResultMarkup(batch,{legacy:prizes===CARD_PRIZES});
 }
 
 export function legacyFixture() {
@@ -113,38 +114,11 @@ export function ticketRows(inventory, status='unused') {
   }).join('')}</div>`;
 }
 
-export function prizeMarkup(reward, state, now, legacy=false) {
-  const physical = reward.type === 'physical';
-  const list = legacy ? CARD_PRIZES : PRIZES;
-  const prize = list.find(item => item.id === reward.prizeId);
-  const voucher = (state.vouchers || []).find(item => item.id === reward.id) || reward;
-  const used = Boolean(voucher.used), expired = !used && now >= (voucher.expiresAt ?? VOUCHER_END);
-  const title = physical ? prize?.name || '实物奖品' : '专家鉴定券';
-  const address = state.addresses?.[reward.id];
-  const status = physical ? address ? '已填写收货信息' : '待完善收货信息' : used ? '已使用' : expired ? '已过期' : '可使用';
-  const visual = physical && legacy ? icon('gift') : prizeArt(physical ? reward.prizeId : 'voucher');
-  return `<article class="ac-prize-card ${physical ? 'is-physical' : ''}"><div class="ac-prize-main"><div class="ac-prize-art">${visual}</div><div><small>${physical ? '实物好礼' : '免费专家鉴别 · 1 次'}</small><h3>${escapeHTML(title)}</h3><p>${physical ? `${escapeHTML(prize?.spec || '1 份')} · ${legacy ? '卡牌第一期' : poolName(reward.pool)}` : `有效至 ${date((voucher.expiresAt ?? VOUCHER_END) - 1)}`}</p><span class="ac-prize-badge ${used || expired ? 'is-dim' : ''}">${status}</span></div></div>
-    ${address ? `<div class="ac-address-summary"><strong>${escapeHTML(address.name)} · ${escapeHTML(String(address.phone || '').replace(/^(\d{3})\d{4}(\d{4})$/,'$1****$2'))}</strong><p>${escapeHTML(address.region)} ${escapeHTML(address.detail)}</p></div>` : ''}
-    ${physical && !legacy ? button(address ? '修改收货信息' : '填写收货信息',`address:${reward.id}`,'ac-gold') : !physical && !used && !expired && !legacy ? button('去使用','go-expert','ac-secondary') : ''}
-    <div class="ac-prize-source"><span>${legacy ? '卡牌第一期' : '专鉴扭蛋活动'} · ${poolName(reward.pool)}</span><span>${time(reward.at)}</span></div></article>`;
-}
-
-let currentEvent = 'expert', route = 'lottery', selectedPool = 'ordinary', detailTab = 'tickets', ticketStatus = 'unused', prizeFilter = 'all';
-let ui = null, toastTimer = null, lastFocus = null, renderQueued = false, drawing = false;
+let currentEvent = null, route = 'lottery', selectedPool = 'ordinary', detailTab = 'tickets', ticketStatus = 'unused', prizeFilter = 'all';
+let ui = EventUI, toastTimer = null, lastFocus = null, renderQueued = false, drawing = false, machineController = null;
 const $ = id => document.getElementById(id);
 const legacyData = () => readLegacy(globalThis.localStorage);
-
-function eventSwitch() {
-  return `<div class="ac-event-switch" role="tablist" aria-label="选择活动">${[
-    ['expert','专鉴扭蛋活动','10.27 — 11.10'],
-    ['card-past','卡牌第一期','已结束 · 查记录'],
-    ['card-next','卡牌下一期','敬请期待'],
-  ].map(([id,label,note]) => `<button role="tab" aria-selected="${currentEvent === id}" data-action="event:${id}">${label}<small>${note}</small></button>`).join('')}</div>`;
-}
-
-function detailTabs() {
-  return `<div class="ac-detail-tabs" role="tablist" aria-label="活动详情">${[['tickets','我的抽奖券'],['records','抽奖记录'],['rules','奖池与规则']].map(([key,label]) => `<button role="tab" aria-selected="${detailTab === key}" data-action="detail:${key}">${label}</button>`).join('')}</div>`;
-}
+const legacyNow = () => Math.max(CARD_END,Date.now());
 
 function ticketFilters(inventory) {
   return `<div class="ac-filter-row" aria-label="抽奖券状态">${[['unused','未使用'],['used','已使用'],['expired','已过期']].map(([key,label]) => `<button aria-pressed="${ticketStatus === key}" data-action="ticket:${key}">${label} ${inventory.counts[key] || 0}</button>`).join('')}<span class="ac-filter-spacer"></span><button data-action="earning-history">获得记录</button></div>`;
@@ -166,53 +140,17 @@ function poolRules(state) {
   return ['advanced','ordinary'].map(pool => `<section><header class="ac-pool-head ${pool === 'advanced' ? 'is-advanced' : ''}">${icon(pool === 'advanced' ? 'crown' : 'ticket')}<h3>${pool === 'advanced' ? '高级' : '普通'}奖池</h3><small>使用${poolName(pool)}</small></header><div class="ac-product-grid">${PRIZES.filter(prize => prize.pool === pool).map(prize => `<article class="ac-product" data-pool="${pool}"><div class="ac-product-art">${prizeArt(prize.id)}</div><strong>${escapeHTML(prize.name)}</strong><small>${prize.quantity == null ? '精选小样 · 规格待公布' : `活动限量 ${prize.quantity} 份${state.stocks?.[prize.id] === 0 ? ' · 已抽完' : ''}`}</small></article>`).join('')}</div><div class="ac-probabilities ${pool === 'advanced' ? 'is-advanced' : ''}"><span><strong>${pool === 'advanced' ? '5' : '8'}%</strong>实物好礼</span><span><strong>${pool === 'advanced' ? '75' : '72'}%</strong>专家鉴定券</span><span><strong>20%</strong>再接再厉</span></div></section>`).join('') + eventRules(state);
 }
 
-function progress(state) {
-  const count = eligibleOrderCount(state), next = count + (2 - count % 2);
-  return `<section class="ac-progress-card"><div class="ac-section-title"><h2>认真鉴别，好运再近一步</h2><button class="ac-link" data-action="go-expert">去专鉴 ${icon('arrow')}</button></div>${ui?.progressMarkup ? ui.progressMarkup(state,{compact:true}) : `<div class="ac-progress-summary"><strong>${count}</strong><span>单累计鉴定</span></div><div class="ac-mini-track"><i style="width:${count % 10 * 10}%"></i></div><p>再鉴定 ${next-count} 单，获得 1 张${next % 10 === 0 ? '高级' : '普通'}抽奖券</p>`}</section>`;
-}
-
-function expertLottery(state, now) {
-  const balance = balances(state,now), count = balance[selectedPool], started = active(now);
-  const inventory = ticketInventory(state,now);
-  const body = detailTab === 'tickets' ? ticketFilters(inventory) + ticketRows(inventory,ticketStatus) : detailTab === 'records' ? state.draws.length ? state.draws.map(batch => recordMarkup(batch)).join('') : empty('下一份好运，等你开启','每次扭蛋的完整结果都会记录在这里。') : poolRules(state);
-  return `<section class="ac-hero"><div class="ac-hero-orbit" aria-hidden="true"></div><div class="ac-eyebrow">图灵专鉴 · 双十一限时活动</div><h2>每一份认真<br><em>都有好运回应</em></h2><p>免费专鉴，解锁你的下一颗惊喜。</p></section>
-    <div class="ac-date-row"><span>10.27 00:00 — 11.11 00:00</span><span class="ac-status-dot">${now < START ? '即将开始' : now >= END ? '活动已结束' : '活动进行中'}</span></div>
-    <section aria-label="选择抽奖券"><div class="ac-section-title"><h2>选择一张好运入场券</h2><small>不同券种，对应不同奖池</small></div><div class="ac-pools">${['ordinary','advanced'].map(pool => `<button class="ac-ticket" data-pool="${pool}" data-action="pool:${pool}" aria-pressed="${selectedPool === pool}">${selectedPool === pool ? `<span class="ac-ticket-selected">${icon('check')}</span>` : ''}<span class="ac-ticket-label">${icon(pool === 'advanced' ? 'crown' : 'ticket')}${poolName(pool)}</span><strong class="ac-ticket-number">${balance[pool]}<small>张可用</small></strong><span class="ac-ticket-note">${pool === 'advanced' ? 'YSL / COACH 等品质好礼' : '精选小样 / 免费鉴定券'}</span></button>`).join('')}</div>
-    <p class="ac-expiry-note">${icon('clock')}${balance.daily ? `<span>含 <strong>${balance.daily} 张今日赠券</strong>，今日有效，优先使用</span>` : '<span>鉴定获得的抽奖券，活动结束时失效</span>'}</p>
-    <div class="ac-draw-actions">${button('扭一次<small>消耗 1 张' + (selectedPool === 'advanced' ? '高级券' : '普通券') + '</small>','draw:1','ac-secondary',!started || count < 1)}${button('五连扭蛋<small>一次收获 5 份惊喜</small>','draw:5',selectedPool === 'advanced' ? 'ac-gold' : 'ac-primary',!started || count < 5)}</div>
-    <p class="ac-draw-status">${!started ? now < START ? '活动开始后，可领取每日赠券并参与扭蛋' : '抽奖券已失效，历史记录与已得奖品仍可查看' : count < 1 ? '当前券种暂无可用券，去专鉴积累好运' : count < 5 ? '五连扭蛋需 5 张同类券，当前还差 ' + (5-count) + ' 张' : '五颗扭蛋，一起揭晓 · 普通券与高级券不混用'}</p></section>
-    ${progress(state)}<button class="ac-benefit-strip" data-action="ranking"><span class="ac-benefit-icon">${icon('crown')}</span><span><strong>鉴真王者 & 避雷王者</strong><small>冲刺前三，赢现金红包与终身专鉴权益</small></span>${icon('arrow')}</button>
-    ${detailTabs()}<section aria-label="活动记录与规则">${body}</section>`;
-}
-
-function oldLottery() {
-  const {state,isDemo} = legacyData(), inventory = legacyInventory(state);
-  const prizes = earnedPrizes(state);
-  const oldRules = `<div class="ac-rules"><h3>第一期活动已结束</h3><ol><li>活动时间：2026 年 9 月 25 日至 10 月 8 日 00:00。所有剩余抽奖券均已失效，不可继续抽奖或转入新活动。</li><li>第一期新人五连抽、鉴定赠券、分享和邀请的历史记录保留展示。已获得的鉴定券仍按原记录的到期时间展示。</li><li>实物中奖和收货信息保留在「我的奖品」，与本期专鉴活动分别管理。</li></ol></div><div class="ac-product-grid" style="margin-top:18px">${CARD_PRIZES.map(prize => `<article class="ac-product"><div class="ac-product-art">${icon('gift')}</div><strong>${escapeHTML(prize.name)}</strong><small>${escapeHTML(prize.spec)}</small></article>`).join('')}</div>`;
-  return `<div class="ac-history-banner">${icon('clock')}<div><strong>第一期已结束，好运记录仍在</strong><p>2026.09.25 — 10.08<br>抽奖券已失效，中奖记录与收货信息保留。</p></div></div>${isDemo ? '<p class="ac-demo-note">尚无你的第一期记录，以下为历史数据展示示例。</p>' : ''}<div class="ac-history-stats"><div><strong>${inventory.counts.expired}</strong><span>已过期抽奖券</span></div><div><strong>${inventory.counts.used}</strong><span>累计使用</span></div><div><strong>${prizes.length}</strong><span>累计奖品</span></div></div>${button('查看第一期奖品','route-prizes','ac-secondary')}${detailTabs()}${detailTab === 'tickets' ? ticketFilters(inventory)+ticketRows(inventory,ticketStatus) : detailTab === 'records' ? state.draws.map(batch => recordMarkup(batch,CARD_PRIZES)).join('') || empty('还没有第一期抽奖记录','该期已有的记录会保留在这里。') : oldRules}`;
-}
-
-function nextLottery() {
-  return `<section class="ac-upcoming"><div class="ac-next-visual">${icon('cards')}</div><div class="ac-eyebrow" style="justify-content:center">卡牌收藏季</div><h2>下一场好运<br>值得一起期待</h2><p>新一期卡牌活动尚未开始。<br>开启后可在这里查看规则、领取抽奖券。<br>上一期记录继续为你保留。</p>${button('先去参加专鉴活动','event:expert','ac-primary')}<div class="ac-upcoming-features"><span>${icon('gift')}新人五连抽</span><span>${icon('shield')}卡牌 AI / 专家鉴定获券</span><span>${icon('ticket')}分享与邀请好礼</span></div><p class="ac-page-note">具体开放时间与规则以后续活动公告为准</p></section>`;
-}
-
-function prizesPage(state, now) {
-  if(currentEvent === 'card-next')return nextLottery();
-  const legacy = currentEvent === 'card-past';
-  const old = legacy ? legacyData() : null;
-  if(legacy)state = old.state;
-  const all = earnedPrizes(state), rewards = all.filter(reward => prizeFilter === 'all' || reward.type === prizeFilter);
-  return `<header class="ac-prizes-heading"><div><h2>收下你的好运</h2><p>${legacy ? '卡牌第一期 · 历史奖品' : '专鉴活动 · 你的每份认真都有回响'}</p></div><div class="ac-prize-count">${all.length}<small>份累计奖品</small></div></header>${legacy && old.isDemo ? '<p class="ac-demo-note">以下为第一期历史记录展示示例。</p>' : ''}<div class="ac-filter-row" aria-label="奖品类型">${[['all','全部奖品'],['physical','实物好礼'],['voucher','鉴定券']].map(([key,label]) => `<button data-action="prize:${key}" aria-pressed="${prizeFilter === key}">${label} ${all.filter(item => key === 'all' || item.type === key).length}</button>`).join('')}</div>${rewards.length ? rewards.map(reward => prizeMarkup(reward,state,legacy ? Math.max(CARD_END,Date.now()) : now,legacy)).join('') : empty('你的好运正在路上','抽中的实物和鉴定券会出现在这里。',button('去抽奖中心','route-lottery','ac-secondary'))}<p class="ac-page-note">${legacy ? '历史奖品保留原有期限 · 本页只展示第一期记录' : '鉴定券有效至 12 月 12 日 · 再接再厉不计入奖品数量'}</p>`;
-}
-
 function render() {
-  if(!$('ac-content'))return;
-  const state = loadEvent(), now = eventNow();
-  $('ac-title').textContent = route === 'prizes' ? '我的奖品' : '抽奖中心';
-  document.title = `${$('ac-title').textContent} · 图灵鉴X`;
-  document.querySelectorAll('.ac-bottom-nav button').forEach(node => node.setAttribute('aria-current', node.dataset.action === `route-${route}` ? 'page' : 'false'));
-  $('ac-content').innerHTML = eventSwitch() + (route === 'prizes' ? prizesPage(state,now) : currentEvent === 'expert' ? expertLottery(state,now) : currentEvent === 'card-past' ? oldLottery() : nextLottery());
-  ui?.focusProgress?.($('ac-content'));
+  if(!$('ac-content') || drawing)return;
+  const state = loadEvent(), now = eventNow(), old = legacyData();
+  document.title = `${route === 'prizes' ? '我的奖品' : '抽奖中心'} · 图灵鉴X`;
+  document.querySelectorAll('#center-tabs button').forEach(node => {
+    const selected = node.dataset.action === `route-${route}`;
+    node.setAttribute('aria-selected',String(selected));node.tabIndex=selected?0:-1;
+  });
+  $('ac-content').setAttribute('aria-labelledby',`tab-${route}`);
+  $('ac-content').innerHTML = route === 'prizes' ? unifiedPrizesMarkup(state,old.state,now,{legacyNow:legacyNow(),isDemo:old.isDemo}) : currentEvent === 'expert' ? expertLotteryMarkup(state,now,{pool:selectedPool}) : currentEvent === 'card-past' ? cardLotteryMarkup(old.state,legacyNow(),ticketStatus,{isDemo:old.isDemo}) : activityChoiceMarkup(state,now);
+  ui.focusProgress($('ac-content'));
 }
 
 function scheduleRender() {
@@ -222,11 +160,12 @@ function scheduleRender() {
 }
 
 function navigate(next, notify=true) {
+  stopInlineDraw();
   route = next === 'prizes' ? 'prizes' : 'lottery';
   history.replaceState(null,'',`#${route}`);
   if(notify)window.jianxRoute?.(route);
   render();
-  window.scrollTo({top:0,behavior:'auto'});
+  $('ac-content').scrollTo?.({top:0,behavior:'auto'});
 }
 
 function toast(message) {
@@ -253,7 +192,6 @@ function showEarnings() {
 }
 
 function showAddress(id) {
-  if(currentEvent !== 'expert')return;
   const state = loadEvent(), reward = earnedPrizes(state).find(item => item.id === id && item.type === 'physical');
   if(!reward)return;
   const address = state.addresses[id] || {};
@@ -265,35 +203,80 @@ function claimForToday() {
   if(result.awarded)saveEvent(result.state);
 }
 
+function cardPhoto(prize,small=false){
+ const [x,y,w,h]=prize.crop,scale=(small?72:104)/h;
+ return `<div class="cl-prize-art ${small?'small':''}"><span role="img" aria-label="${escapeHTML(prize.name)}" style="width:${w*scale}px;height:${h*scale}px;background-image:url('assets/prize-source.jpg');background-size:${1532*scale}px ${1256*scale}px;background-position:${-x*scale}px ${-y*scale}px"></span></div>`;
+}
+
+function stopInlineDraw(){machineController?.destroy();machineController=null;drawing=false;}
+function showDrawResult(batch){
+ const dialog=ui.showEventDialog('扭蛋结果',ui.resultMarkup(batch),{className:'ev-center-result'});
+ dialog.querySelector('[data-result-prizes]').onclick=()=>{dialog.close('navigate');navigate('prizes');};
+ dialog.querySelector('[data-result-expert]').onclick=()=>{dialog.close('navigate');ui.goExpert();};
+ dialog.querySelector('[data-result-again]').onclick=()=>{dialog.close('repeat');startInlineDraw(batch.rewards.length);};
+}
+function startInlineDraw(count){
+ if(drawing || ![1,5].includes(count))return;
+ const response=EventModel.draw(loadEvent(),{pool:selectedPool,count,requestId:crypto.randomUUID()},eventNow());
+ if(response.error){toast(response.error);render();return;}
+ // Lock before saving: storage notifications must not replace a running machine.
+ drawing=true;saveEvent(response.state);
+ $('ac-content').querySelectorAll('[data-action^="draw:"],[data-action^="pool:"]').forEach(button=>button.disabled=true);
+ $('ac-content').querySelector('[data-action="skip-draw"]').hidden=false;
+ machineController=mountMachine($('ac-content').querySelector('.gm-machine'));
+ machineController.play({count,pool:selectedPool,onReveal:()=>{
+   stopInlineDraw();render();showDrawResult(response.batch);
+ }});
+}
+function showBatch(activity,id){
+ const legacy=activity==='card',state=legacy?legacyData().state:loadEvent();
+ const batch=state.draws.find(item=>item.id===id);
+ if(!batch){toast('未找到对应抽奖记录');return;}
+ modal('本次抽奖结果',batchResultMarkup(batch,{legacy,state,now:legacy?legacyNow():eventNow()}));
+}
+function showTicketDetails(){
+ const inventory=ticketInventory(loadEvent(),eventNow());
+ modal('我的抽奖券',ticketFilters(inventory)+ticketRows(inventory,ticketStatus));
+}
+
 async function handleAction(action) {
-  if(action === 'back'){window.jianxNavigate?.('expert',{intent:'gacha'});return;}
-  if(action.startsWith('route-')){navigate(action.slice(6));return;}
-  if(action.startsWith('event:')){currentEvent=action.slice(6);ticketStatus=currentEvent === 'card-past' ? 'expired' : 'unused';detailTab='tickets';prizeFilter='all';render();return;}
-  if(action.startsWith('pool:')){selectedPool=action.slice(5);render();return;}
-  if(action.startsWith('detail:')){detailTab=action.slice(7);render();return;}
-  if(action.startsWith('ticket:')){ticketStatus=action.slice(7);render();return;}
-  if(action.startsWith('prize:')){prizeFilter=action.slice(6);render();return;}
+  if(action === 'back'){
+    if(route==='lottery'&&currentEvent){currentEvent=null;navigate('lottery');}
+    else window.jianxNavigate?.('expert');return;
+  }
+  if(action === 'choose-activity'){currentEvent=null;navigate('lottery');return;}
+  if(action === 'nav-lottery')action='route-lottery';
+  if(action.startsWith('route-')){if(action==='route-lottery')currentEvent=null;navigate(action.slice(6));return;}
+  if(action.startsWith('event:')){currentEvent=action.slice(6)==='expert'?'expert':'card-past';ticketStatus='unused';navigate('lottery');return;}
+  if(action.startsWith('pool:')){if(!drawing){selectedPool=action.slice(5);render();}return;}
+  if(action === 'skip-draw'){machineController?.skip();return;}
+  if(action.startsWith('tickets-')){ticketStatus=action.slice(8);render();return;}
+  if(action.startsWith('ticket:')){ticketStatus=action.slice(7);showTicketDetails();return;}
+  if(action === 'ticket-details'){showTicketDetails();return;}
   if(action === 'go-expert'){window.jianxNavigate?.('expert',{intent:'open-expert'});return;}
+  if(action === 'go-card'){window.jianxNavigate?.('card');return;}
   if(action === 'close'){closeModal();return;}
   if(action === 'earning-history'){showEarnings();return;}
+  if(action === 'ticket-history'){modal('抽奖券获得记录',ticketHistory(legacyData().state,legacyNow()));return;}
+  if(action === 'rules'){modal('卡牌活动规则',rulesMarkup());return;}
+  if(action === 'earning-info'){modal('获券方式','<p>卡牌第一期已结束，下一期尚未开启。原新人五连抽、鉴定赠券、分享与邀请奖励将在新一期活动开始后开放。</p>'+rulesMarkup());return;}
+  if(action === 'prize-pool'){modal('卡牌奖池',prizePool(cardPhoto));return;}
+  if(action === 'expert-rules'){modal('双11奖池与规则',poolRules(loadEvent()));return;}
+  if(action.startsWith('result:')){const [,activity,...id]=action.split(':');showBatch(activity,id.join(':'));return;}
+  if(action.startsWith('voucher:')){
+    const [,activity,...parts]=action.split(':'),id=parts.join(':'),state=activity==='card'?legacyData().state:loadEvent();
+    const voucher=state.vouchers.find(item=>item.id===id);
+    if(!voucher||voucher.used||(activity==='card'?legacyNow():eventNow())>=voucher.expiresAt){toast('该鉴别券已使用或已过期');return;}
+    if($('ac-dialog').open)closeModal();window.jianxNavigate?.(activity==='card'?'card':'expert',activity==='card'?{}:{intent:'open-expert'});return;
+  }
   if(action.startsWith('address:')){showAddress(action.slice(8));return;}
   if(action === 'sample-address'){
     const form = $('ac-address-form');
     for(const [key,value] of Object.entries({name:'体验用户',phone:'13800000000',region:'北京市 朝阳区',detail:'演示街道 100 号（不用于配送）'}))form.elements[key].value = value;
     return;
   }
-  if(action === 'ranking'){
-    ui ||= await import('./expert-event-ui.js');
-    ui.openLeaderboard();
-    return;
-  }
-  if(action.startsWith('draw:') && currentEvent === 'expert' && !drawing){
-    const count = Number(action.slice(5)), state = loadEvent(), now = eventNow();
-    if(![1,5].includes(count) || !active(now) || balances(state,now)[selectedPool] < count){toast('当前券种可用抽奖券不足');render();return;}
-    drawing = true;
-    try{ui ||= await import('./expert-event-ui.js');await ui.openDraw({pool:selectedPool,count,onChange:scheduleRender});}
-    finally{drawing=false;scheduleRender();}
-  }
+  if(action === 'ranking'){ui.openLeaderboard();return;}
+  if(action.startsWith('draw:') && currentEvent === 'expert' && !drawing)startInlineDraw(Number(action.slice(5)));
 }
 
 async function boot() {
@@ -317,13 +300,19 @@ async function boot() {
     closeModal();
     toast('收货信息已保存，可随时修改');
   });
+  $('center-tabs').addEventListener('keydown',event=>{
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    event.preventDefault();handleAction(`route-${event.key==='Home'?'lottery':event.key==='End'?'prizes':route==='prizes'?'lottery':'prizes'}`);
+    $('center-tabs').querySelector('[aria-selected="true"]').focus();
+  });
+  $('ac-dialog').addEventListener('cancel',event=>{event.preventDefault();closeModal();});
   $('ac-dialog').addEventListener('click',event => {if(event.target === $('ac-dialog'))closeModal();});
   window.addEventListener('expert-event-change',scheduleRender);
   window.addEventListener('storage',event => {if(event.key === CARD_KEY)scheduleRender();});
   window.addEventListener('hashchange',() => navigate(location.hash.slice(1),false));
   window.addEventListener('jianx-shell',event => {
     const message = event.detail;
-    if(message.type === 'visibility' && !message.active){if($('ac-dialog').open)closeModal();return;}
+    if(message.type === 'visibility' && !message.active){stopInlineDraw();ui.closeEventDialog();if($('ac-dialog').open)closeModal();return;}
     if(message.type === 'visibility' && message.active){claimForToday();scheduleRender();}
     if(message.type !== 'activate')return;
     ({currentEvent,selectedPool,ticketStatus,detailTab,prizeFilter} = resolveActivityNavigation(
@@ -337,7 +326,7 @@ async function boot() {
   claimForToday();
   render();
   window.jianxReady?.();
-  try{ui=await import('./expert-event-ui.js');render();if(location.hash === '#ranking')ui.openLeaderboard();}catch{}
+  if(location.hash === '#ranking')ui.openLeaderboard();
 }
 
 if(typeof document !== 'undefined')boot();

@@ -133,10 +133,13 @@ test('five draw results retain each blank result and distinguish the actual phys
   }));
   assert.equal(document.querySelector('h2').textContent,'好礼已抵达');
   const cards=document.querySelectorAll('.ev-result-card');
-  assert.equal(cards.length,5);
+  assert.equal(cards.length,3);
   assert.equal(cards.filter(card=>card.classList.contains('is-empty')).length,2);
   assert.equal(cards.filter(card=>card.classList.contains('is-physical')).length,1);
-  assert.deepEqual(cards.map(card=>card.querySelector('strong').textContent),['YSL气垫','专家鉴定券','再接再厉','专家鉴定券','再接再厉']);
+  assert.deepEqual(cards.map(card=>card.querySelector('strong').textContent),['YSL气垫','再接再厉','再接再厉']);
+  assert.equal(document.querySelectorAll('.reward-coupon').length,1);
+  assert.match(document.querySelector('.coupon-value').textContent,/×2/);
+  assert.match(document.querySelector('.coupon-content').textContent,/专家线上鉴别券/);
   assert.match(document.querySelector('.ev-result-heading').textContent,/高级奖池\s*·\s*五连抽/);
   assert.match(document.querySelector('[data-result-again]').textContent,/再扭五次/);
 });
@@ -319,7 +322,7 @@ test('an explicitly supplied draw generator produces one saved result and skippi
   assert.equal(loadEvent().draws.length,1);
   const skip=dialog().querySelector('[data-skip]');
   skip.click();skip.click();
-  assert.equal(dialog().querySelectorAll('.ev-result-card').length,1);
+  assert.equal(dialog().querySelectorAll('.reward-coupon').length,1);
   assert.equal(loadEvent().draws.length,1);
   assert.equal(loadEvent().tickets.filter(ticket=>ticket.pool==='advanced').reduce((sum,ticket)=>sum+ticket.remaining,0),0);
   dialog().querySelector('[data-result-back]').click();
@@ -384,7 +387,7 @@ test('draw result prize entry explicitly selects the expert activity and the dra
 
 test('hub prize and record entries carry the currently selected pool instead of stale card context',t=>{
   const {dialog,navigations}=dialogHarness(t,orders(20));
-  for(const [button,route] of [['data-hub-prizes','prizes'],['data-hub-center','lottery']]) {
+  for(const [button,route] of [['data-hub-prizes','prizes'],['data-hub-center','prizes']]) {
     for(const pool of ['advanced','ordinary']) {
       openActivityHub({pool:pool==='advanced'?'ordinary':'advanced'});
       dialog().querySelector(`[data-hub-pool="${pool}"]`).click();

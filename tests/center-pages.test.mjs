@@ -16,7 +16,7 @@ test('newcomer gift retains used state after expiry; acquisition history stays p
   const html=ticketHistory(state,t+2*DAY);
   assert.match(html,/已使用 5 张/);assert.equal(ticketInventory(state,t+2*DAY).counts.expired,0);
   assert.match(html,/>\+5<small>/);assert.doesNotMatch(html,/data-action="draw-welcome"/);
-  assert.match(prizePanel(state,t+2*DAY,()=>''),/专家线上鉴定券/);
+  assert.match(prizePanel(state,t+2*DAY,()=>''),/专家线上鉴别券/);
   assert.match(prizePanel(state,t+2*DAY,()=>''),/到期时间<br>2026/);
 });
 test('expiry applies to remaining ordinary balance, not historical incoming rows',()=>{

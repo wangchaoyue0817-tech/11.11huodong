@@ -18,9 +18,9 @@ test('reward total excludes no-win results while the complete draw record retain
   assert.deepEqual(earnedPrizes(state).map(item => item.pool),['advanced','advanced']);
   const html = recordMarkup(state.draws[0]);
   assert.match(html,/再接再厉/);
-  assert.match(html,/未中奖/);
   assert.match(html,/YSL气垫/);
   assert.match(html,/高级抽奖券/);
+  assert.match(html,/reward-coupon/);
 });
 
 test('center progress includes only own eligible submissions during the activity',() => {
@@ -116,22 +116,30 @@ test('user content is escaped in historical prize and address views',() => {
   assert.equal(escapeHTML('"<>&\''),'&quot;&lt;&gt;&amp;&#39;');
 });
 
-test('multi-event center loads shared draw UI and exposes no historical draw action',async () => {
+test('center restores the accessible original top tabs and uses an inline shared machine',async () => {
   const source = await readFile(new URL('../public/activity-center.js',import.meta.url),'utf8');
   const html = await readFile(new URL('../public/activity.html',import.meta.url),'utf8');
-  assert.match(source,/ui\.openDraw\(\{pool:selectedPool,count,onChange:scheduleRender\}\)/);
+  assert.match(source,/mountMachine\(\$\('ac-content'\)\.querySelector\('\.gm-machine'\)\)/);
+  assert.doesNotMatch(source,/ui\.openDraw\(/);
   assert.match(source,/currentEvent === 'expert' && !drawing/);
   assert.match(source,/美妆、包袋、鞋靴、服饰、手表、数码3C/);
-  assert.match(source,/卡牌下一期/);
+  assert.match(html,/REWARDS CENTER/);
+  assert.match(html,/class="center-tab-switcher" role="tablist"/);
+  assert.match(html,/id="tab-lottery" role="tab"[^>]*aria-controls="ac-content"[^>]*>抽奖券/);
+  assert.match(html,/id="tab-prizes" role="tab"[^>]*aria-controls="ac-content"[^>]*>我的奖品/);
+  assert.match(html,/id="ac-content"[^>]*role="tabpanel"/);
+  assert.doesNotMatch(html,/ac-bottom-nav/);
   assert.match(html,/site-bridge\.js/);
   assert.match(html,/capsule-machine\.css/);
+  assert.ok(html.indexOf('lottery-center.css')<html.indexOf('card-spectrum.css'));
+  assert.ok(html.indexOf('center-tabs')<html.indexOf('<main id="ac-content"'));
 });
 
-test('card history activation defaults to expired tickets and resets stale detail views',()=>{
+test('card activity activation restores the original unused tab and resets stale detail views',()=>{
   const original={currentEvent:'expert',selectedPool:'advanced',ticketStatus:'unused',detailTab:'records',prizeFilter:'physical'};
   const next=resolveActivityNavigation(original,{event:'card-past'});
   assert.deepEqual(next,{
-    currentEvent:'card-past',selectedPool:'advanced',ticketStatus:'expired',detailTab:'tickets',prizeFilter:'all'
+    currentEvent:'card-past',selectedPool:'advanced',ticketStatus:'unused',detailTab:'tickets',prizeFilter:'all'
   });
   assert.equal(original.detailTab,'records');
   assert.equal(original.currentEvent,'expert');
@@ -148,12 +156,17 @@ test('explicit scene ticket filters override campaign defaults, including ended 
     assert.equal(next.prizeFilter,'all');
   }
   assert.equal(resolveActivityNavigation(current,{event:'card-next'}).ticketStatus,'unused');
+  assert.equal(resolveActivityNavigation(current,{event:'card-next'}).currentEvent,'card-past');
 });
 
-test('activity activation ignores invalid selectors and preserves existing view without an explicit campaign',()=>{
+test('invalid selectors and prize navigation preserve state, while generic lottery entry returns to activity selection',()=>{
   const current={currentEvent:'expert',selectedPool:'ordinary',ticketStatus:'used',detailTab:'records',prizeFilter:'voucher'};
   assert.deepEqual(resolveActivityNavigation(current,{event:'retired',pool:'welcome',ticketStatus:'all'}),current);
   assert.deepEqual(resolveActivityNavigation(current,{route:'prizes'}),current);
   assert.equal(resolveActivityNavigation(current,{pool:'advanced'}).selectedPool,'advanced');
   assert.equal(resolveActivityNavigation(current,{ticketStatus:'expired'}).ticketStatus,'expired');
+  const generic=resolveActivityNavigation(current,{route:'lottery'});
+  assert.equal(generic.currentEvent,null);
+  assert.equal(current.currentEvent,'expert');
+  assert.equal(resolveActivityNavigation(generic,{route:'lottery',event:'expert',pool:'advanced'}).currentEvent,'expert');
 });

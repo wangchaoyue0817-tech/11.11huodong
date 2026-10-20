@@ -6,22 +6,27 @@
   <meta name="theme-color" content="#11132e">
   <title>抽奖中心 · 图灵鉴X</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="design-tokens.css">
+  <link rel="stylesheet" href="card.css">
+  <link rel="stylesheet" href="card-theme.css">
+  <link rel="stylesheet" href="lottery-center.css">
+  <link rel="stylesheet" href="reward-polish.css">
+  <link rel="stylesheet" href="card-spectrum.css">
   <link rel="stylesheet" href="capsule-machine.css">
   <link rel="stylesheet" href="expert-event-ui.css">
   <link rel="stylesheet" href="activity-center.css">
 </head>
-<body>
-  <div class="ac-app">
-    <header class="ac-topbar">
-      <button class="ac-icon-button" data-action="back" aria-label="返回专家鉴别"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg></button>
-      <h1 id="ac-title">抽奖中心</h1>
-      <span class="ac-demo-label">体验版</span>
+<body class="ac-body cl-body">
+  <div class="ac-app cl-device is-center">
+    <header class="cl-nav">
+      <button class="cl-icon-button" data-action="back" aria-label="返回"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg></button>
+      <div><small>REWARDS CENTER</small><h1 id="ac-title">抽奖中心</h1></div><span aria-hidden="true"></span>
     </header>
-    <main id="ac-content"></main>
-    <nav class="ac-bottom-nav" aria-label="活动导航">
-      <button data-action="route-lottery" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v5a2 2 0 0 0 0 4v5H4v-5a2 2 0 0 0 0-4V5Z"/><path d="M15 5v3m0 3v2m0 3v3"/></svg><span>抽奖中心</span></button>
-      <button data-action="route-prizes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h18v4H3zm2 4v9h14v-9M12 8v13"/><path d="M12 8C9 8 5 7 5 4.5A2.5 2.5 0 0 1 9.5 3C11 5 12 8 12 8Zm0 0c3 0 7-1 7-3.5A2.5 2.5 0 0 0 14.5 3C13 5 12 8 12 8Z"/></svg><span>我的奖品</span></button>
+    <nav id="center-tabs" class="center-tab-switcher" role="tablist" aria-label="抽奖中心">
+      <button id="tab-lottery" role="tab" data-action="route-lottery" aria-selected="true" aria-controls="ac-content">抽奖券</button>
+      <button id="tab-prizes" role="tab" data-action="route-prizes" aria-selected="false" aria-controls="ac-content" tabindex="-1">我的奖品</button>
     </nav>
+    <main id="ac-content" class="cl-content" role="tabpanel" aria-labelledby="tab-lottery"></main>
   </div>
   <dialog id="ac-dialog" class="ac-dialog" aria-labelledby="ac-dialog-title"></dialog>
   <div id="ac-toast" class="ac-toast" role="status" aria-live="polite"></div>

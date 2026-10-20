@@ -1,6 +1,7 @@
 import {START,END,PRIZES,active,balances,draw,leaderboard,isEligibleCategory} from './expert-event-model.js';
 import {loadEvent,saveEvent,eventNow} from './expert-event-session.js';
 import {machineMarkup,mountMachine,prizeArt} from './capsule-machine.js';
+import {voucherMarkup} from './reward-ui.js';
 
 export const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const eventCount=state=>state.orders.filter(o=>o.uid===state.uid&&o.at>=START&&o.at<END&&o.eligible!==false&&isEligibleCategory(o.category)).length;
@@ -60,7 +61,7 @@ export function openRules({onReturn}={}){
  <h3>每天一次免费机会</h3><p>每日首次进入活动自动领取 1 张普通券，当天有效，未使用不顺延。鉴定获得的券有效至活动结束。优先使用即将到期的券。</p>
  <h3>普通与高级奖池</h3><p>普通池：实物 8%、鉴定券 72%、再接再厉 20%。高级池：实物 5%、鉴定券 75%、再接再厉 20%。同池可抽实物等概率；库存为零后不再抽出该奖品。</p>
  <p>本活动每人最多获得 1 份实物，普通与高级池合计计算，与卡牌活动独立。已中实物或奖池实物全部领完后，实物概率转为鉴定券。鉴定券有效至 2026 年 12 月 12 日 23:59:59。</p>
- <h3>单抽与五连抽</h3><p>选择一种券，每次使用 1 张或同种 5 张。不同券种、不同活动的券不能混用。结果自动保存，可以稍后在抽奖记录中查看。</p>
+ <h3>单抽与五连抽</h3><p>选择一种券，每次使用 1 张或同种 5 张。不同券种、不同活动的券不能混用。结果自动保存，统一在「我的奖品」查看。</p>
  <h3>鉴真王者与避雷王者</h3><p>按活动期间六大品类的专家最终鉴真、鉴假订单数分别排名；同数按先达到者优先。活动结束后才出结果的订单不计入。两榜可同时获奖。</p><p>鉴真榜前三名：每人称号与 200 元现金红包。避雷榜前三名：每人称号与终身免费专鉴权益，不限品类与次数。活动结束时统一结算。</p>
  <p class="ev-demo-note">当前为交互演示。鉴定、奖励、榜单及库存为本机模拟，商品图为奖品示意。</p></div>`,{onClose:({reason})=>{if(reason==='dismiss')onReturn?.();}});
 }
@@ -96,8 +97,11 @@ export function openDraw({pool='ordinary',count=1,onChange,onReturn,random}={}){
 }
 export function resultMarkup(batch,{canReturn=false}={}){
  const won=batch.rewards.filter(r=>r.type!=='none'),many=batch.rewards.length===5;
- return `<div class="ev-result-heading"><span class="ev-eyebrow">${batch.pool==='advanced'?'高级奖池':'普通奖池'} · ${many?'五连抽':'单次抽取'}</span><h2>${won.length?'好礼已抵达':'再接再厉'}</h2><p>${won.length?'这份好运，为认真鉴别的你':'完成专鉴，积攒下一份好运'}</p></div>
- <div class="ev-result-grid ${many?'is-five':''}">${batch.rewards.map(r=>`<article class="ev-result-card ${r.type==='physical'?'is-physical':''} ${r.type==='none'?'is-empty':''}">${prizeArt(r.type==='physical'?r.prizeId:r.type)}<strong>${escapeHtml(r.type==='physical'?PRIZES.find(p=>p.id===r.prizeId)?.name:r.type==='voucher'?'专家鉴定券':'再接再厉')}</strong><small>${r.type==='voucher'?'有效至 12.12':r.type==='physical'?'实物奖品 · 已存入我的奖品':'继续积攒好运'}</small></article>`).join('')}</div>
+ const vouchers=batch.rewards.filter(r=>r.type==='voucher');
+ const other=batch.rewards.filter(r=>r.type!=='voucher');
+ return `<div class="ev-result-heading"><span class="ev-eyebrow">${batch.pool==='advanced'?'高级奖池':'普通奖池'} · ${many?'五连抽':'单次抽取'}</span><h2>${won.length?'好礼已抵达':'再接再厉'}</h2><p>${won.length?'奖品已存入「我的奖品」':'完成专鉴，积攒下一份好运'}</p></div>
+ ${other.length?`<div class="ev-result-grid ${many?'is-five':''}">${other.map(r=>`<article class="ev-result-card ${r.type==='physical'?'is-physical':'is-empty'}">${prizeArt(r.type==='physical'?r.prizeId:'none')}<strong>${escapeHtml(r.type==='physical'?PRIZES.find(p=>p.id===r.prizeId)?.name:'再接再厉')}</strong><small>${r.type==='physical'?'实物奖品 · 已存入我的奖品':'继续积攒好运'}</small></article>`).join('')}</div>`:''}
+ ${vouchers.length?voucherMarkup(vouchers.length,vouchers[0].expiresAt,{title:'专家线上鉴别券',category:'双11扭蛋 · 专家服务',displayExpiresAt:vouchers[0].expiresAt-1,action:'result-voucher',readOnly:true}):''}
  <div class="ev-result-rule">每鉴定 <b>2</b> 单得普通券 · 每 <b>10</b> 单得高级券</div>
  <button class="ev-primary" data-result-expert>限时免费，去专鉴 ${icon()}</button>
  <div class="ev-result-actions"><button class="ev-text-button" data-result-prizes>查看我的奖品</button><button class="ev-text-button" data-result-again>再扭${many?'五次':'一次'} ${icon()}</button></div>${canReturn?'<button class="ev-text-button ev-full ev-result-back" data-result-back>返回活动，选择其他奖池</button>':''}`;
@@ -130,7 +134,7 @@ export function openActivityHub({onChange,pool='ordinary'}={}){
   d.querySelector('[data-hub-rules]').onclick=()=>{d.close('rules');openRules({onReturn:reopen});};
   d.querySelector('[data-hub-rank]').onclick=()=>{d.close('ranking');openLeaderboard('true',{onReturn:reopen});};
   d.querySelector('[data-hub-prizes]').onclick=()=>{d.close('navigate');window.jianxNavigate?.('prizes',{event:'expert',pool:selected});};
-  d.querySelector('[data-hub-center]').onclick=()=>{d.close('navigate');window.jianxNavigate?.('lottery',{event:'expert',pool:selected});};
+  d.querySelector('[data-hub-center]').onclick=()=>{d.close('navigate');window.jianxNavigate?.('prizes',{event:'expert',pool:selected});};
   d.querySelector('[data-hub-expert]').onclick=()=>{d.close('navigate');goExpert();};
   focusProgress(d);
  };

@@ -11,7 +11,7 @@ const earned = data => data.ledger.filter(row=>row.amount>0);
 const totalEarned = data => earned(data).filter(row=>row.type==='ordinary').reduce((total,row)=>total+row.amount,0);
 const totalUsed = data => -data.ledger.filter(row=>row.amount<0&&row.type==='ordinary').reduce((total,row)=>total+row.amount,0);
 
-export function ticketPanel(data,now,recordType='unused') {
+export function ticketPanel(data,now,recordType='unused',options={}) {
   const balance=available(data,now), newcomer=data.welcome;
   const inventory=ticketInventory(data,now);
   return `<section class="center-wallet" aria-label="可用抽奖券">
@@ -24,8 +24,8 @@ export function ticketPanel(data,now,recordType='unused') {
   ${balance.welcome?`<section class="center-newcomer"><div class="center-newcomer-icon">${ticketEmblem()}</div><div><strong>新人专属抽奖券 <b>5 张</b></strong><p>${expiry(newcomer.expiresAt)} 到期</p><small>仅限一次性五连抽 · 中奖率 100%</small></div>${button('五连抽','draw-welcome','cl-gold')}</section>`:''}
   <div class="center-utilities"><button class="center-utility" data-action="earning-info"><span class="cl-small-icon">${glyph('cards')}</span><span><strong>获券方式</strong><small>发现更多抽奖机会</small></span>${glyph('caret-right')}</button><button class="center-utility" data-action="prize-pool"><span class="cl-small-icon gold">${glyph('handbag')}</span><span><strong>查看奖池</strong><small>好礼值得期待</small></span>${glyph('caret-right')}</button></div>
   <section class="center-records" aria-label="抽奖券明细"><header class="center-section-heading"><h2>我的抽奖券</h2><button class="cl-text-button" data-action="ticket-history">获得记录 ${glyph('caret-right')}</button></header><div class="center-ticket-states" role="group" aria-label="抽奖券状态">${[['unused','未使用'],['used','已使用'],['expired','已过期']].map(([key,label])=>`<button aria-pressed="${recordType===key}" data-action="tickets-${key}">${label}<b>${inventory.counts[key]}</b></button>`).join('')}</div>
-  ${recordType==='used'?usageRecords(data):ticketCards(inventory[recordType==='expired'?'expired':'unused'],recordType==='expired')}
-  </section><p class="center-ledger-note">${recordType==='used'?'每笔记录对应一次抽奖，点击可查看本次完整结果。':'同批券部分使用后，仅剩余未用张数留在未使用列表。'}</p>`;
+  ${recordType==='used'?usageRecords(data,options):ticketCards(inventory[recordType==='expired'?'expired':'unused'],recordType==='expired')}
+  </section><p class="center-ledger-note">${recordType==='used'?(options.ticketOnly?'中奖记录统一保存在「我的奖品」。':'每笔记录对应一次抽奖，点击可查看本次完整结果。'):'同批券部分使用后，仅剩余未用张数留在未使用列表。'}</p>`;
 }
 
 function ticketCards(lots,expired){
@@ -39,7 +39,11 @@ export function ticketHistory(data,now){
   return `<div class="center-ledger">${inventory.lots.map(lot=>`<article class="center-ledger-row"><span class="cl-small-icon">${glyph('cards')}</span><div><strong>${esc(lot.source)}</strong><p>${time(lot.at)} · ${lot.type==='welcome'?'新人专属券':'普通抽奖券'}</p><small>已使用 ${lot.used} 张 · ${now>=lot.expiresAt?'已过期':'未使用'} ${lot.remaining} 张</small></div><b>+${lot.total}<small>张</small></b></article>`).join('')}</div><p class="center-ledger-note">同到期日的普通抽奖券，按到账顺序优先使用。</p>`;
 }
 
-function usageRecords(data){
+function usageRecords(data,{ticketOnly=false}={}){
+  if(ticketOnly){
+    const uses=data.ledger.filter(row=>row.amount<0);
+    return uses.length?`<div class="center-ledger">${uses.map(row=>`<article class="center-ledger-row"><span class="cl-small-icon">${glyph('cards')}</span><div><strong>${esc(row.source)}</strong><p>${time(row.at)} · ${row.type==='welcome'?'新人专属券':'普通抽奖券'}</p></div><b>−${Math.abs(row.amount)}<small>张</small></b></article>`).join('')}</div>`:'<div class="cl-empty"><h3>还没有使用记录</h3></div>';
+  }
   if(!data.draws.length)return `<div class="cl-empty">${glyph('cards')}<h3>还没有使用记录</h3><p>每次抽奖的券数与中奖结果<br>会一起记录在这里。</p></div>`;
   const groups=new Map();data.draws.forEach(batch=>{const key=day(batch.at);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(batch);});
   return [...groups].map(([label,batches])=>`<section class="center-date-group"><h3>${label}</h3><div class="center-ledger">${batches.map(batch=>{

@@ -1,8 +1,19 @@
-import {glyph} from './ui-common.js';
+import {esc,glyph} from './ui-common.js';
 export const rewardTime=t=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(t);
 export const ticketEmblem=()=>'<img class="ticket-emblem" src="assets/icons/crystal-reward.svg" alt="" aria-hidden="true">';
-export function voucherMarkup(count,expiresAt){
-  return `<div class="center-voucher-reward reward-coupon"><div class="coupon-value"><span>EXPERT PASS</span>${ticketEmblem()}<strong>×${count}</strong><small>专家鉴定券</small></div><div class="coupon-content"><span class="coupon-category">卡牌专属 · 专家服务</span><strong>专家线上鉴定券</strong><small>${expiresAt?`到期时间<br>${rewardTime(expiresAt)}`:'中奖后有效期 7 天'}</small>${expiresAt?`<button class="coupon-use" data-action="voucher-use">去使用 ${glyph('arrow-right')}</button>`:''}</div></div>`;
+export function voucherMarkup(count,expiresAt,options={}){
+  const {
+    title='专家线上鉴别券',category='卡牌专属 · 专家服务',action='voucher-use',
+    used=false,expired=false,readOnly=false,displayExpiresAt=expiresAt,
+    note='中奖后有效期 7 天',
+  }=options;
+  const unavailable=used||expired;
+  const status=used?'已使用':expired?'已过期':'可使用';
+  const control=expiresAt?(unavailable
+    ?`<button class="coupon-use" disabled>${status}</button>`
+    :readOnly?`<small class="coupon-status">${status}</small>`
+    :`<button class="coupon-use" data-action="${esc(action)}">去使用 ${glyph('arrow-right')}</button>`):'';
+  return `<div class="center-voucher-reward reward-coupon${used?' is-used':expired?' is-expired':''}"><div class="coupon-value"><span>EXPERT PASS</span>${ticketEmblem()}<strong>×${esc(count)}</strong><small>专家鉴别券</small></div><div class="coupon-content"><span class="coupon-category">${esc(category)}</span><strong>${esc(title)}</strong><small>${expiresAt?`到期时间<br>${rewardTime(displayExpiresAt)}`:esc(note)}</small>${control}</div></div>`;
 }
 export function grantMarkup({amount=1,source='AI 鉴定完成',pool='ordinary',expiresAt,today=null,sharePrompt=false,retry=false}){
   const newcomer=pool==='welcome',complete=today===10;
