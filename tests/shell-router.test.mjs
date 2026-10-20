@@ -31,13 +31,15 @@ function fixture(hash = '#home') {
 }
 const lastActivation = frame => frame.sent.filter(entry => entry.message.type === 'activate').at(-1)?.message;
 
-test('five public routes activate only the two extracted modules', () => {
-  for (const route of ['home', 'expert', 'card', 'lottery', 'prizes']) {
+test('six public routes activate home, card or the shared activity module', () => {
+  const modules={home:'home',expert:'home',card:'card',lottery:'activity',prizes:'activity',ranking:'activity'};
+  for (const [route,module] of Object.entries(modules)) {
     const f = fixture(`#${route}`);
     assert.equal(f.frames.length, 1);
     const frame = f.frames[0];
-    assert.equal(frame.dataset.module, ['home', 'expert'].includes(route) ? 'home' : 'card');
+    assert.equal(frame.dataset.module,module);
     if (route === 'expert') assert.match(frame.src, /tab=expert/);
+    if (module !== 'home') assert.equal(new URL(frame.src, f.location.origin).hash, `#${route}`);
     f.send(frame, {type: 'ready'});
     assert.equal(lastActivation(frame).route, route);
     assert.equal(f.loading.hidden, true);
@@ -62,8 +64,18 @@ test('module navigation waits for ready and preserves photo intent across iframe
   f.send(card, {type: 'ready'});
   assert.deepEqual(lastActivation(card), {channel: 'jianx-shell', type: 'activate', route: 'card', intent: 'choose-card', photo: {url: 'blob:photo'}});
   f.send(card, {type: 'navigate', route: 'lottery'});
-  assert.equal(f.frames.length, 2);
-  assert.equal(lastActivation(card).route, 'lottery');
+  assert.equal(f.frames.length, 3);
+  const activity=f.frames[2];
+  assert.equal(activity.dataset.module,'activity');
+  assert.equal(card.hidden,true);
+  assert.equal(lastActivation(activity),undefined);
+  assert.equal(f.loading.hidden,false);
+  f.send(activity,{type:'ready'});
+  assert.equal(lastActivation(activity).route,'lottery');
+  assert.equal(f.loading.hidden,true);
+  f.send(activity,{type:'navigate',route:'prizes'});
+  assert.equal(f.frames.length,3);
+  assert.equal(lastActivation(activity).route,'prizes');
 });
 
 test('a late ready message from the inactive module cannot dismiss active loading', () => {
@@ -80,18 +92,22 @@ test('a late ready message from the inactive module cannot dismiss active loadin
   assert.equal(lastActivation(card).route, 'card');
 });
 
-test('new conversation resets loaded modules and activates home without creating a third frame', () => {
+test('new conversation resets all three loaded modules and reuses the home frame', () => {
   const f = fixture();
   const home = f.frames[0];
   f.send(home, {type: 'ready'});
   f.send(home, {type: 'navigate', route: 'card'});
   const card = f.frames[1];
   f.send(card, {type: 'ready'});
-  f.send(card, {type: 'new-chat'});
+  f.send(card,{type:'navigate',route:'lottery'});
+  const activity=f.frames[2];
+  f.send(activity,{type:'ready'});
+  f.send(activity, {type: 'new-chat'});
   assert.equal(f.location.hash, '#home');
   assert.equal(home.hidden, false);
   assert.equal(card.hidden, true);
-  assert.equal(f.frames.length, 2);
+  assert.equal(activity.hidden,true);
+  assert.equal(f.frames.length, 3);
   for (const frame of f.frames) assert.ok(frame.sent.some(entry => entry.message.type === 'reset-chat'));
   assert.equal(lastActivation(home).intent, 'new-chat');
 });
@@ -101,19 +117,51 @@ test('back navigation and same-module route messages keep URL, title and visibil
   const home = f.frames[0];
   f.send(home, {type: 'ready'});
   f.navigate('lottery');
-  const card = f.frames[1];
-  f.send(card, {type: 'ready'});
-  f.send(card, {type: 'route', route: 'prizes'});
+  const activity = f.frames[1];
+  f.send(activity, {type: 'ready'});
+  f.send(activity, {type: 'route', route: 'prizes'});
   assert.equal(f.location.hash, '#prizes');
   assert.match(f.document.title, /我的奖品/);
   assert.equal(f.historyCalls.at(-1).type, 'replaceState');
   f.location.hash = '#home';
   f.events.get('popstate')();
   assert.equal(home.hidden, false);
-  assert.equal(card.hidden, true);
+  assert.equal(activity.hidden, true);
   assert.equal(lastActivation(home).route, 'home');
-  f.send(card, {type: 'route', route: 'prizes'});
+  f.send(activity, {type: 'route', route: 'prizes'});
   assert.equal(f.location.hash, '#home', 'inactive module cannot overwrite active route');
+});
+
+test('activity routes share one frame and the latest pending route wins before ready',()=>{
+  const f=fixture('#lottery'),activity=f.frames[0];
+  f.navigate('prizes');
+  f.navigate('ranking');
+  assert.equal(f.frames.length,1);
+  assert.equal(f.loading.hidden,false);
+  assert.equal(lastActivation(activity),undefined);
+  f.send(activity,{type:'ready'});
+  assert.equal(lastActivation(activity).route,'ranking');
+  assert.match(f.document.title,/专鉴荣誉榜/);
+  f.send(activity,{type:'route',route:'card'});
+  assert.equal(f.location.hash,'#ranking','activity cannot pretend to be the card module');
+});
+
+test('late card ready cannot activate it over the pending activity page',()=>{
+  const f=fixture('#card'),card=f.frames[0];
+  f.navigate('lottery');
+  const activity=f.frames[1];
+  f.send(card,{type:'ready'});
+  assert.equal(card.hidden,true);
+  assert.equal(lastActivation(card),undefined);
+  assert.equal(f.loading.hidden,false);
+  f.send(activity,{type:'ready'});
+  assert.equal(lastActivation(activity).route,'lottery');
+  assert.equal(activity.hidden,false);
+  f.navigate('card');
+  assert.equal(f.frames.length,2);
+  assert.equal(card.hidden,false);
+  assert.equal(activity.hidden,true);
+  assert.equal(lastActivation(card).route,'card');
 });
 
 test('messages from wrong origins, unknown windows and invalid destinations are ignored', () => {

@@ -1,5 +1,5 @@
-const routes={home:'home',expert:'home',card:'card',lottery:'card',prizes:'card'};
-const titles={home:'首页',expert:'专家鉴别',card:'鉴卡牌',lottery:'抽奖中心',prizes:'我的奖品'};
+const routes={home:'home',expert:'home',card:'card',lottery:'activity',prizes:'activity',ranking:'activity'};
+const titles={home:'首页',expert:'专家鉴别',card:'鉴卡牌',lottery:'抽奖中心',prizes:'我的奖品',ranking:'专鉴荣誉榜'};
 const frames=new Map(),pending=new Map(),ready=new Set();let current='';
 function send(frame,message){frame.contentWindow?.postMessage({channel:'jianx-shell',...message},location.origin);}
 function activate(route,extra={}){
@@ -8,7 +8,7 @@ function activate(route,extra={}){
   document.getElementById('site-loading').hidden=ready.has(module);
   for(const [key,frame]of frames){frame.hidden=key!==module;send(frame,{type:'visibility',active:key===module});}
   let frame=frames.get(module);const message={type:'activate',route,...extra};
-  if(!frame){frame=document.createElement('iframe');frame.title=titles[route];frame.src=`${module}.html?embedded=1${route==='expert'?'&tab=expert':''}${module==='card'?'#'+route:''}`;frame.dataset.module=module;frames.set(module,frame);pending.set(module,message);document.querySelector('.site-shell').append(frame);document.getElementById('site-loading').hidden=false;}
+  if(!frame){frame=document.createElement('iframe');frame.title=titles[route];frame.src=`${module}.html?embedded=1${route==='expert'?'&tab=expert':''}${module!=='home'?'#'+route:''}`;frame.dataset.module=module;frames.set(module,frame);pending.set(module,message);document.querySelector('.site-shell').append(frame);document.getElementById('site-loading').hidden=false;}
   else {frame.hidden=false;if(ready.has(module))send(frame,message);else pending.set(module,message);}
 }
 function navigate(route,extra={}){if(!routes[route])return;if(location.hash!=='#'+route)history.pushState({route},'',`#${route}`);activate(route,extra);}

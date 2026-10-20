@@ -83,8 +83,8 @@ test('extracted project contains only the requested modules and no React build d
   assert.deepEqual(forbidden, [], `Excluded module content remains in: ${forbidden.join(', ')}`);
 });
 
-test('navigation exposes only home, expert, card, lottery and prizes', async () => {
-  const expected = new Set(['home', 'expert', 'card', 'lottery', 'prizes']);
+test('navigation exposes home, expert, card and the shared activity destinations', async () => {
+  const expected = new Set(['home', 'expert', 'card', 'lottery', 'prizes', 'ranking']);
   const shell = await readFile(path.join(root, 'site-shell.js'), 'utf8');
   const routeMap = shell.match(/\broutes\s*=\s*\{([^}]+)\}/)?.[1];
   assert.ok(routeMap, 'The shell must declare its supported routes');

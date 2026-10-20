@@ -55,7 +55,7 @@ function updateSkillBtn(){
  else{btn.className='toolbar-btn';btn.innerHTML=initialSkillBtn;}
  $('inputTip').textContent=(HOT.find(s=>s.label===state.selected)||{}).tip||'本服务由AI提供，请注意甄别';
 }
-function selectSkill(label){if(label==='鉴卡牌'){closePopup();window.jianxNavigate('card');return;}if(state.tab!=='ai')setTab('ai');state.selected=label;state.center=skills.findIndex(s=>s.label===label);positionCards();updateSkillBtn();renderPopup();closePopup();suspend(20000);toast(`已开启${label}，可上传照片或输入问题`);}
+function selectSkill(label){if(label==='鉴卡牌'){closePopup();window.jianxNavigate('card');return;}if(state.tab!=='ai')setTab('ai');state.selected=label;state.center=skills.findIndex(s=>s.label===label);positionCards();updateSkillBtn();renderPopup();closePopup();suspend(20000);toast(`已开启${label}，可上传照片或输入问题`);if(label==='鉴美妆')window.jianxShowBeautyDemo?.();}
 function openPopup(){state.focusReturn=document.activeElement;$('menuPanel').hidden=true;renderPopup();$('skillPopup').classList.add('show');$('sheetMask').classList.add('show');$('popupClose').focus();}
 function closePopup(){const wasOpen=$('skillPopup').classList.contains('show')||$('agreeSheet').classList.contains('show');$('skillPopup').classList.remove('show');$('sheetMask').classList.remove('show');$('agreeSheet').classList.remove('show');if(wasOpen&&state.focusReturn?.isConnected)state.focusReturn.focus();if(wasOpen)suspend();}
 function setTab(tab){
@@ -65,7 +65,7 @@ function setTab(tab){
  document.querySelectorAll('.home-mode-tab-item').forEach(el=>{el.classList.toggle('active',el.dataset.tab===tab);el.setAttribute('aria-selected',String(el.dataset.tab===tab));});
  $('pageScroll').scrollTop=0;closePopup();if(tab==='ai')positionCards(true);
  const url=new URL(location.href);if(tab==='expert')url.searchParams.set('tab','expert');else url.searchParams.delete('tab');history.replaceState(null,'',url);
- window.jianxRoute?.(tab==='expert'?'expert':'home');
+ window.jianxRoute?.(tab==='expert'?'expert':'home');if(tab==='expert'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('expert-tab-open'));
 }
 function setBanner(i,manual=false){state.banner=(i+3)%3;$('bannerTrack').style.transform=`translateX(-${state.banner*100}%)`;document.querySelectorAll('[data-page]').forEach((el,j)=>{el.classList.toggle('active',j===state.banner);el.setAttribute('aria-current',String(j===state.banner));});document.querySelectorAll('[data-banner]').forEach((el,j)=>{el.tabIndex=j===state.banner?0:-1;el.setAttribute('aria-hidden',String(j!==state.banner));});if(manual)state.bannerHold=Date.now()+18000;}
 function toggleMotion(){state.paused=!state.paused;document.body.classList.toggle('motion-paused',state.paused);$('motionControl').textContent=state.paused?'▷':'Ⅱ';$('motionControl').setAttribute('aria-label',state.paused?'继续自动播放':'暂停自动播放');$('motionControl').title=state.paused?'继续自动播放':'暂停自动播放';}
@@ -134,10 +134,10 @@ function bindSwipe(el,onSwipe){let start=null,moved=false,suppressUntil=0;
  el.addEventListener('click',e=>{if(Date.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
  el.addEventListener('mouseenter',()=>{if(matchMedia('(hover:hover)').matches)state.pointer=true;});el.addEventListener('mouseleave',()=>{state.pointer=false;});
 }
-const questions=['中古包重点看哪些细节？','怎么辨别美妆小样？','二手包大概什么价？','这双鞋是正品吗？','如何判断手表成色？','穿搭怎么更有质感？','卡牌正面需要拍清哪些细节？','怎样保存收藏卡牌？','奢侈品怎么辨别真假？','包袋如何保养？','玉石有哪些鉴别要点？','收藏品如何辨别材质？'];
+const questions=['林** 抽中了 YSL气垫','许** 抽中了 专家鉴定券','苏** 抽中了 COACH腰带','周** 抽中了 香水小样','陈** 抽中了 雷蛇耳机','宋** 抽中了 专家鉴定券','叶** 抽中了 护肤品小样','江** 抽中了 COACH钱包','程** 抽中了 美妆小样','杨** 抽中了 专家鉴定券','吴** 抽中了 香水小样','王** 抽中了 专家鉴定券'];
 const tickerRows=[];
 function createTicker(){
- $('ticker').innerHTML=[0,1,2].map(row=>{const items=questions.filter((_,i)=>i%3===row);const html=items.map((t,i)=>`<button class="suggestion-item" type="button" data-question="${escaped(t)}"><i aria-hidden="true" class="suggestion-dot ${(i+row)%2?'a':'b'}"></i><span class="suggestion-text">${t}</span></button>`).join('');return `<div class="suggestion-row"><div class="suggestion-track"><div class="ticker-set" style="display:flex;gap:7px">${html}</div><div class="ticker-set" aria-hidden="true" style="display:flex;gap:7px">${html}</div></div></div>`;}).join('');
+ $('ticker').innerHTML=[0,1,2].map(row=>{const items=questions.filter((_,i)=>i%3===row);const html=items.map((t,i)=>`<button class="suggestion-item" type="button" data-winner="${escaped(t)}"><i aria-hidden="true" class="suggestion-dot ${(i+row)%2?'a':'b'}"></i><span class="suggestion-text">${t}<span class="eh-winner-arrow">›</span></span></button>`).join('');return `<div class="suggestion-row"><div class="suggestion-track"><div class="ticker-set" style="display:flex;gap:7px">${html}</div><div class="ticker-set" aria-hidden="true" style="display:flex;gap:7px">${html}</div></div></div>`;}).join('');
  document.querySelectorAll('.suggestion-track').forEach((el,i)=>{el.querySelectorAll('[aria-hidden="true"] button').forEach(b=>b.tabIndex=-1);const r={el,x:i===1?-120:-i*68,width:0,dir:i===1?1:-1,drag:false,last:0};tickerRows.push(r);let down=null;
  el.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,base:r.x};r.drag=true;r.last=e.clientX;});el.addEventListener('pointermove',e=>{if(!down)return;if(Math.abs(e.clientX-down.x)>8){el.setPointerCapture(e.pointerId);r.x=down.base+e.clientX-down.x;}});
  el.addEventListener('pointerup',e=>{if(down&&Math.abs(e.clientX-down.x)>8){el.dataset.noClick=String(Date.now()+300);}down=null;r.drag=false;});el.addEventListener('pointercancel',()=>{down=null;r.drag=false;});el.addEventListener('mouseenter',()=>r.hover=true);el.addEventListener('mouseleave',()=>r.hover=false);
@@ -161,7 +161,7 @@ bindSkillSwipe($('skillCarousel'));bindSwipe($('bannerViewport'),dir=>setBanner(
 $('bannerDots').onclick=e=>{const b=e.target.closest('[data-page]');if(b)setBanner(Number(b.dataset.page),true);};
 $('bannerTrack').onclick=e=>{const b=e.target.closest('[data-banner]');if(!b)return;const n=Number(b.dataset.banner);if(n===0)openPopup();else if(n===1)setTab('expert');else selectSkill('估价格');};
 $('skillList').onclick=e=>{const item=e.target.closest('[data-skill]');if(item)selectSkill(item.dataset.skill);};$('skillBtn').onclick=openPopup;$('popupClose').onclick=closePopup;$('sheetMask').onclick=closePopup;
-$('ticker').onclick=e=>{const b=e.target.closest('[data-question]');if(!b)return;const track=b.closest('.suggestion-track');if(Number(track.dataset.noClick)>Date.now())return;$('inputField').value=b.dataset.question;syncInput();suspend();$('inputField').focus();};
+$('ticker').onclick=e=>{const b=e.target.closest('[data-winner]');if(!b)return;const track=b.closest('.suggestion-track');if(Number(track.dataset.noClick)>Date.now())return;window.jianxNavigate('expert',{intent:'gacha'});};
 $('inputField').addEventListener('input',syncInput);$('inputField').addEventListener('focus',()=>{syncInput();suspend();});$('inputField').addEventListener('blur',syncInput);$('inputField').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sendMessage();}});
 $('sendBtn').onclick=sendMessage;$('uploadBtn').onclick=()=>$('photoInput').click();$('photoInput').onchange=e=>{for(const file of e.target.files){if(!file.type.startsWith('image/')){toast('请选择图片文件');continue;}if(file.size>12*1024*1024){toast('单张照片请小于 12MB');continue;}if(state.photos.length>=3){toast('最多选择 3 张照片');break;}state.photos.push({url:URL.createObjectURL(file),name:file.name});}e.target.value='';renderPhotos();suspend();};$('attachmentTray').onclick=e=>{const b=e.target.closest('[data-remove]');if(b){const i=Number(b.dataset.remove);URL.revokeObjectURL(state.photos[i].url);state.photos.splice(i,1);renderPhotos();}};
 $('closeConversation').onclick=()=>{$('conversationPanel').hidden=true;suspend();};
@@ -177,3 +177,5 @@ const composerLayout=new ResizeObserver(()=>{if(state.tab==='ai'){const app=$('a
 skillTimer=setInterval(()=>{if(!blocked()&&Date.now()>state.holdUntil)moveSkill(1);},5200);bannerTimer=setInterval(()=>{if(!blocked()&&Date.now()>state.bannerHold&&Date.now()>state.holdUntil)setBanner(state.banner+1);},7800);
 if(new URLSearchParams(location.search).get('tab')==='expert')setTab('expert');else setTab('ai');
 window.addEventListener('pagehide',()=>{state.photos.forEach(p=>URL.revokeObjectURL(p.url));});
+
+window.jianxSetTab=setTab;

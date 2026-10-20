@@ -18,13 +18,14 @@
   </header>
   <p class="ep-subtitle" id="epSubtitle">从日常好物，到珍藏之选</p>
   <div class="ep-category-view" id="epCategoryView">
-   <div class="ep-category-meta"><span>全部品类 <b>28</b></span><span>${glyph('shield-check')} 专家一对一</span></div>
+   <div class="ep-category-meta"><span>全部品类 <b>28</b></span><span class="ep-free-label">${glyph('shield-check')} 全品类限时免费</span></div>
    <div class="ep-category-scroll" id="epCategoryScroll"><div class="ep-category-grid" id="epCategoryGrid"></div><p class="ep-list-end">每一份珍藏，都值得认真对待</p></div>
    <div class="ep-category-footer">选择品类，查看品牌与款式 ${glyph('arrow-right')}</div>
   </div>
   <div class="ep-product-view" id="epProductView" hidden>
    <div class="ep-product-main">
    <nav class="ep-category-nav" aria-label="切换鉴定品类"><div class="ep-nav-label"><strong>选择品类</strong><span>左右滑动查看全部</span></div><div class="ep-category-tabs" id="epCategoryTabs"></div></nav>
+   <div class="ep-free-notice">${glyph('shield-check')}<span>专家一对一鉴别 · 全品类限时免费</span><strong>0 元</strong></div>
    <ol class="ep-steps" aria-label="选择进度"><li class="done"><b>1.</b>品类</li><li id="epGroupStep"><b>2.</b><span>品牌</span></li><li id="epStyleStep"><b>3.</b><span>款式 / 系列</span></li></ol>
    <div class="ep-columns">
     <section class="ep-column"><div class="ep-column-heading"><h3 id="epGroupTitle">品牌</h3><span id="epGroupCount"></span></div><label class="ep-search">${glyph('magnifying-glass')}<input id="epGroupSearch" type="search" autocomplete="off" aria-label="搜索品牌" placeholder="搜索品牌名称"></label><div class="ep-options" id="epGroups" role="group" aria-label="品牌列表"></div></section>
@@ -33,7 +34,7 @@
    <button class="ep-feedback-card" id="epFeedback"><span class="ep-feedback-icon">${glyph('chat-circle-dots')}</span><span><strong>没有找到您的产品？</strong><small>告诉我们，帮助完善产品库</small></span><span class="ep-feedback-action">提交反馈 ${glyph('arrow-right')}</span></button>
    </div>
    <footer class="ep-product-footer">
-    <div class="ep-checkout"><div class="ep-selection"><span class="ep-label">已选：</span><div id="epSelection" class="ep-selected-tags"></div></div><div class="ep-checkout-action"><div class="ep-total"><span>鉴定费</span><strong id="epPrice"></strong></div><button class="ep-confirm" id="epConfirm" disabled><span>请选择品牌与款式</span></button></div></div>
+    <div class="ep-checkout"><div class="ep-selection"><span class="ep-label">已选：</span><div id="epSelection" class="ep-selected-tags"></div></div><div class="ep-checkout-action"><div class="ep-total"><span>本单</span><del id="epOriginalPrice"></del><strong id="epPrice">0 元</strong></div><button class="ep-confirm" id="epConfirm" disabled><span>请选择品牌与款式</span></button></div></div>
     <div class="ep-agreement"><label><input id="epAgree" type="checkbox"><span>我已阅读并同意</span></label><button id="epAgreementLink" type="button">《在线鉴别服务协议》</button></div>
     <p class="ep-status" id="epStatus" role="status">产品库为演示数据，确认不会产生订单或扣费</p>
    </footer>
@@ -42,7 +43,7 @@
  </section>`;
  app.append(root);
  const catalog=EXPERT_CATALOG;
- e('epCategoryGrid').innerHTML=catalog.map((c,i)=>`<button class="ep-category-card tone-${i%3}" data-ep-category="${i}" type="button" aria-label="${html(c.name)}，${price(c)}"><span class="ep-category-emblem"><span class="ep-category-icon" style="--ep-icon:url('assets/icons/${c.icon}')" aria-hidden="true"></span></span><span class="ep-category-copy"><span class="ep-category-name">${html(c.name)}</span><span class="ep-category-price"><small>¥</small>${(c.price/100).toFixed(2)}<em>/ 次</em></span></span><span class="ep-category-enter">${glyph('caret-right')}</span></button>`).join('');
+ e('epCategoryGrid').innerHTML=catalog.map((c,i)=>`<button class="ep-category-card tone-${i%3}" data-ep-category="${i}" type="button" aria-label="${html(c.name)}，原价${price(c)}，限时免费0元"><span class="ep-category-emblem"><span class="ep-category-icon" style="--ep-icon:url('assets/icons/${c.icon}')" aria-hidden="true"></span></span><span class="ep-category-copy"><span class="ep-category-name">${html(c.name)}</span><span class="ep-category-price"><del>${price(c)}</del><strong>0<small>元</small></strong></span></span><span class="ep-category-enter">${glyph('caret-right')}</span></button>`).join('');
  const tabOrder=['bags','footwear','beauty','beauty-nondestructive','electronics-nondestructive'];
  const tabCatalog=[...catalog].sort((a,b)=>(tabOrder.includes(a.id)?tabOrder.indexOf(a.id):99)-(tabOrder.includes(b.id)?tabOrder.indexOf(b.id):99));
  e('epCategoryTabs').innerHTML=tabCatalog.map(c=>{const i=catalog.indexOf(c);return `<button type="button" data-ep-category="${i}" aria-pressed="false">${html(c.name)}</button>`;}).join('');
@@ -101,11 +102,11 @@
  }
  function renderSelection(){
   const c=picker.category,g=picker.group===null?null:c.groups[picker.group],s=picker.style===null?null:styleInfo(g?.styles[picker.style]).name;
-  e('epSelection').innerHTML=[c.name,g?.name,s].filter(Boolean).map((name,i)=>`<span class="ep-selected-tag ${i===2?'is-style':''}">${html(name)}</span>`).join('');e('epPrice').textContent=price(c);
+  e('epSelection').innerHTML=[c.name,g?.name,s].filter(Boolean).map((name,i)=>`<span class="ep-selected-tag ${i===2?'is-style':''}">${html(name)}</span>`).join('');e('epOriginalPrice').textContent=price(c);e('epPrice').textContent='0 元';
   e('epGroupStep').className=g?'done':'current';e('epStyleStep').className=s?'done':g?'current':'';
   e('epAgree').checked=agreed;
   e('epConfirm').disabled=!s;
-  e('epConfirm').querySelector('span').textContent=picker.confirmed?'已确认选择':s?'确认选择，开始鉴定':`请选择${g?c.styleLabel:c.groupLabel}`;
+  e('epConfirm').querySelector('span').textContent=picker.confirmed?'已确认选择':s?'0元开始鉴定':`请选择${g?c.styleLabel:c.groupLabel}`;
   e('epStatus').textContent=picker.confirmed?'选择已确认。当前为交互演示，未创建订单或扣费。':'产品库为演示数据，确认不会产生订单或扣费';
   e('epStatus').classList.remove('is-error');
  }
@@ -136,6 +137,7 @@
    if(picker.group===null||picker.style===null)return;
    if(!agreed){e('epStatus').textContent='请先阅读并勾选服务协议';e('epStatus').classList.add('is-error');e('epAgree').focus();return;}
    picker.confirmed=true;renderSelection();
+   if(window.onExpertSelected){const c=picker.category,g=c.groups[picker.group],s=styleInfo(g.styles[picker.style]);close(false);window.onExpertSelected({category:c.name,brand:g.name,style:s.name,name:g.name+' · '+s.name,price:c.price});}
   }
  });
  e('epGroupSearch').addEventListener('input',renderGroups);e('epStyleSearch').addEventListener('input',renderStyles);

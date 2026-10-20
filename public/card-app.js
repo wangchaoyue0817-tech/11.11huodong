@@ -12,9 +12,11 @@ let route='card',fileURL='',sample=false,report=null,busy=false,modalType='',foc
 let stopDraw=null,stopCelebration=null,recordType='unused';
 let cardBrand='',cardStyle='',chatDraft='',chatMessage='',ownsPhoto=false,pendingGrant=null;
 function clearCardPhoto(){if(fileURL&&ownsPhoto)URL.revokeObjectURL(fileURL);fileURL='';ownsPhoto=false;}
-const now=()=>mode==='real'?Date.now():clockBase+Date.now()-clockReal;
+// First card campaign is archived; future issuance needs its own configured period.
+const now=()=>Math.max(END+1,mode==='real'?Date.now():clockBase+Date.now()-clockReal);
 const fmt=t=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(t);
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({state:data,mode,clockBase,clockReal}));}catch{notify('浏览器无法保存，关闭页面后演示记录可能丢失');}};
+const CARD_CAMPAIGN_ENABLED=false;
+const save=()=>{if(!CARD_CAMPAIGN_ENABLED)return;try{localStorage.setItem(KEY,JSON.stringify({state:data,mode,clockBase,clockReal}));}catch{notify('浏览器无法保存，关闭页面后演示记录可能丢失');}};
 const btn=(text,action,cls='cl-primary',extra='')=>`<button class="${cls}" data-action="${action}" ${extra}>${text}</button>`;
 const ticketIcon=()=>ticketEmblem();
 const status=()=>now()<START?'活动未开始':now()>=END?'活动已结束':'活动进行中';
@@ -45,7 +47,7 @@ centerTabs.addEventListener('keydown',event=>{
 setupDrawer($('nav-menu'));
 $('nav-back').onclick=()=>{if(route==='card')window.jianxNavigate('home');else navigate('card');};
 $('demo-settings').onclick=()=>showDemo();
-function navigate(to){location.hash=to;window.jianxRoute(to);}
+function navigate(to){if(['lottery','prizes'].includes(to)){window.jianxNavigate(to);return;}location.hash=to;window.jianxRoute(to);}
 function render(){
   const restoreTabFocus=!!document.activeElement?.closest('#center-tabs');
   const hash=location.hash.slice(1);route=hash==='prizes'?'prizes':['lottery','records'].includes(hash)?'lottery':'card';
@@ -70,10 +72,10 @@ function render(){
 function cardPage(){
   const balance=available(data,now());
   return `<section class="card-intro spectrum-template-card"><div class="card-hero-main"><div class="card-hero-copy"><div class="card-hero-kicker"><i></i> 卡牌光谱解析</div><h2>读懂卡牌的<br><em>每一处细节</em></h2></div><div class="card-spectrum-art" aria-hidden="true"><div class="card-spectrum-scan"></div><div class="card-spectrum-ring ring-one"></div><div class="card-spectrum-ring ring-two"></div><div class="card-spectrum-orbit orbit-one"><i></i><i></i></div><div class="card-spectrum-orbit orbit-two"><i></i><i></i></div><div class="card-spectrum-orbit orbit-three"><i></i></div><div class="card-spectrum-core"><span class="card-spectrum-glyph"></span><b>CARD</b><small>光谱鉴定</small></div><div class="card-spectrum-reticle"><i></i><i></i><i></i><i></i></div><span class="card-spectrum-token token-one"></span><span class="card-spectrum-token token-two"></span></div></div><p class="card-intro-description">让镜头捕捉卡面此刻的纹理与光泽，一张清晰正面照，即可开启 AI 初鉴与专家复核，读懂你的每一份收藏。</p><div class="card-category-pills"><span>智能初鉴</span><span>专家复核</span><span>价值参考</span></div><div class="card-preview-tools">${btn('使用演示样例','sample','cl-text-button')}${btn('切换演示场景','demo','cl-text-button')}</div></section>
-  <button class="card-luck-entry" data-action="nav-lottery"><img class="card-luck-banner-art" src="assets/card-luck-banner-v2.png" alt=""><span class="card-luck-art">${ticketEmblem()}</span><span class="card-luck-copy"><small>COLLECT A LITTLE LUCK</small><strong>鉴卡有礼，每次都有惊喜</strong><em>${balance.welcome?'新人专属五连抽已就绪':`普通抽奖券 ${balance.ordinary} 张`} · 中奖率 100%</em></span><b class="card-luck-arrow">${glyph('arrow-right')}</b></button>
+  <button class="card-luck-entry" data-action="nav-lottery"><img class="card-luck-banner-art" src="assets/card-luck-banner-v2.png" alt=""><span class="card-luck-art">${ticketEmblem()}</span><span class="card-luck-copy"><small>COLLECT A LITTLE LUCK</small><strong>鉴卡有礼，每次都有惊喜</strong><em>${balance.welcome?'第一期已结束':`卡牌活动下一期待开启`} · 查看历史奖品</em></span><b class="card-luck-arrow">${glyph('arrow-right')}</b></button>
   ${fileURL||sample?`<section class="card-recognition"><div class="card-upload-message"><img src="${fileURL?esc(fileURL):'assets/card-hero.png'}" alt="待鉴定卡牌"><span>${cardBrand?`${esc(cardBrand)} · ${esc(cardStyle)}`:'上传成功 · 请先选择品牌与款式'}</span></div><p>已识别到卡牌。该品类暂不支持自动匹配款式，请选择品牌与款式后开始鉴定。</p>${btn(busy?'正在鉴定…':cardBrand?'已选款式，开始鉴定':'去选款式，开始鉴定',cardBrand?'identify':'choose-style','cl-primary cl-full',busy?'disabled':'')}${cardBrand?btn('重新选择品牌款式','choose-style','cl-text-button'):''}</section>`:''}
   ${chatMessage?`<section class="card-chat-message"><p>${esc(chatMessage)}</p><small>请上传单张卡牌的正面清晰实拍，再选择品牌与款式开始鉴定。</small></section>`:''}
-  ${report?`<section class="cl-report"><div class="cl-section-heading"><h2>${glyph('crystal-reward')}AI 初鉴已完成</h2><span class="cl-tag">模拟结果</span></div><h3>收藏卡 · 正面信息可辨识</h3><p>可观察卡面图案、印刷边缘与表面状态。仅凭当前图片无法确认真伪，以下为流程演示。</p><div class="cl-report-metrics"><span>卡面完整度<strong>良好</strong></span><span>图片清晰度<strong>清晰</strong></span><span>建议复核<strong>印刷细节</strong></span></div>${report.expert?`<div class="cl-expert-done">${glyph('shield-check')}专家模拟结果已生成<small>演示结论：建议结合实物复核；不构成真实鉴定凭证。</small></div>`:btn(`转专家线上鉴定 <span>¥4.99 ${glyph('arrow-right')}</span>`,'expert','cl-expert-button')}<small class="cl-footnote">报告编号 ${esc(report.id.slice(-8))} · ${fmt(report.at)}</small></section>`:''}
+  ${report?`<section class="cl-report"><div class="cl-section-heading"><h2>${glyph('crystal-reward')}AI 初鉴已完成</h2><span class="cl-tag">模拟结果</span></div><h3>收藏卡 · 正面信息可辨识</h3><p>可观察卡面图案、印刷边缘与表面状态。仅凭当前图片无法确认真伪，以下为流程演示。</p><div class="cl-report-metrics"><span>卡面完整度<strong>良好</strong></span><span>图片清晰度<strong>清晰</strong></span><span>建议复核<strong>印刷细节</strong></span></div>${report.expert?`<div class="cl-expert-done">${glyph('shield-check')}专家模拟结果已生成<small>演示结论：建议结合实物复核；不构成真实鉴定凭证。</small></div>`:btn(`转专家线上鉴定 <span>限时免费 ${glyph('arrow-right')}</span>`,'expert','cl-expert-button')}<small class="cl-footnote">报告编号 ${esc(report.id.slice(-8))} · ${fmt(report.at)}</small></section>`:''}
   <p class="cl-page-note">图片仅在本机预览 · 鉴定结果为模拟展示</p>`;
 }
 function chooseStyle(){
@@ -122,20 +124,18 @@ function showRules(){modal('抽奖规则',rulesMarkup()+btn('我知道了','clos
 function showInvite(){
   modal('分享热爱，邀请有礼',`<div class="cl-modal-centered"><span class="cl-big-reward">+5<small> 张 / 人</small></span><h3>好朋友，好运一起收</h3><p>转发小程序给好友，<br>每邀请一位新用户完成注册，即可获得 5 张抽奖券。</p></div><div class="cl-invite-facts"><span>无需鉴定满 10 张</span><span>不占每日鉴定额度</span></div>${btn('转发小程序，邀请好友','invite-share','cl-primary cl-full',!active(now())?'disabled':'')}<p id="invite-share-status" class="cl-footnote" role="status"></p><p class="cl-rule-note">普通转发不直接发奖。新用户注册前，最后打开的小程序分享卡片所属邀请人获得奖励。</p><details class="cl-demo-detail"><summary>演示：验证邀请注册奖励</summary><p>此操作仅模拟一位新用户注册，不创建真实账户。</p><label>注册前最后打开的小程序分享卡片来自<select id="invite-owner"><option value="self">当前体验用户</option><option value="other">其他邀请人</option></select></label>${btn('模拟新用户完成注册','register-invite','cl-secondary cl-full',!active(now())?'disabled':'')}</details>`,'invite');
 }
-function showExpert(){
-  if(busy){notify('请等待本次 AI 鉴定完成');return;}
-  if(!report)return;const vouchers=data.vouchers.filter(v=>!v.used&&v.expiresAt>now()).length;
-  modal('确认专家鉴定',`<div class="cl-checkout-item">${glyph('shield-check')}<div><h3>卡牌专家线上鉴定</h3><p>一张卡牌 · 专家复核</p></div><strong>¥4.99</strong></div><div class="cl-checkout-options"><label><input type="radio" name="expert-pay" value="cash" checked>模拟支付 ¥4.99</label><label class="${vouchers?'':'disabled'}"><input type="radio" name="expert-pay" value="voucher" ${vouchers?'':'disabled'}>使用已有专家鉴定券 <span>${vouchers} 张可用</span></label></div><p class="cl-rule-note">支付或用券兑换成功后送 1 张普通抽奖券，计入每日鉴定获券上限。已达上限仍可鉴定。</p>${btn('确认模拟支付／兑换','pay-expert','cl-gold cl-full')}<p class="cl-page-note">不会真实扣款 · 专家结果为模拟展示</p>`,'expert');
-}
+function showExpert(){if(busy){notify('请等待本次 AI 鉴定完成');return;}if(!report)return;window.jianxNavigate('expert',{intent:'card-expert'});}
 function showAddress(id){
   const r=physicals().find(p=>p.id===id);if(!r)return;const a=data.addresses[id]||{};
   modal('收下这份收藏好礼',`<p class="cl-muted">完善收货信息，保存后可随时修改。</p><form id="address-form" data-prize="${esc(id)}" novalidate>${[['name','收货人','例如：体验用户'],['phone','手机号码','请输入 11 位手机号'],['region','所在地区','省 / 市 / 区'],['detail','详细地址','街道、小区及门牌号']].map(([key,label,placeholder])=>`<label class="cl-field">${label}<input name="${key}" value="${esc(a[key]||'')}" placeholder="${placeholder}" ${key==='phone'?'inputmode="tel" maxlength="11"':'maxlength="100"'} required aria-describedby="error-${key}"><span class="cl-field-error" id="error-${key}"></span></label>`).join('')}<button type="button" class="cl-text-button" data-action="sample-address">填入演示地址</button><p class="cl-rule-note">活动结束后 7 个工作日内寄出。</p><p class="cl-page-note">演示页面，请勿填写真实个人信息。地址仅保存在此浏览器，不会用于配送。</p><button type="submit" class="cl-gold cl-full">保存收货信息</button></form>`,'address');
   $('address-form').onsubmit=e=>{e.preventDefault();const address=Object.fromEntries(new FormData(e.target));const errors=validateAddress(address);for(const [k,msg]of Object.entries(errors)){ $(`error-${k}`).textContent=msg;e.target.elements[k].setAttribute('aria-invalid',!!msg); }if(Object.values(errors).some(Boolean)){e.target.querySelector('[aria-invalid="true"]').focus();return;}reloadCampaign();data.addresses[id]=address;save();closeModal();navigate('prizes');render();notify('收货信息已保存，可随时修改');};
 }
 function showDemo(){
+  if(!CARD_CAMPAIGN_ENABLED){modal('卡牌活动待开启',`<div class="cl-rules"><h3>第一期活动已结束</h3><p>历史抽奖券、奖品及领奖信息已保留，可在抽奖中心切换到卡牌第一期查看。</p><h3>下一期敬请期待</h3><p>当前可体验 AI 卡牌鉴定及免费专鉴，暂不发放卡牌抽奖券。卡牌专鉴不参与本次六品类扭蛋活动。</p></div>${btn('查看抽奖中心','nav-lottery','cl-primary cl-full')}`);return;}
   modal('演示场景',`<p class="cl-muted">仅切换本预览的模拟账户和时间，不影响任何真实账户。切换将替换当前演示记录。</p><div class="cl-scenarios">${[['new','新人首次进入','活动中 · 5 张新人礼包'],['ordinary','老用户已有抽奖券','5 张普通券 · 可单抽／五连抽'],['ten','满 10 张分享奖励','直接查看当次限时分享弹窗'],['won','实物中奖展示','查看实物领奖与收货信息'],['expired','新人礼包已过期','24 小时后 · 普通券仍可使用'],['ended','活动已结束','抽奖券失效 · 查看记录和地址'],['before','活动未开始','未发放新人礼包'],['real','按真实日期预览','恢复实际日历 · 仍为模拟业务']].map(([id,t,s])=>btn(`<strong>${t}</strong><small>${s}</small>${glyph('caret-right')}`,`scenario-${id}`,'cl-scenario')).join('')}</div><p class="cl-page-note">正式日期：2026.09.25—10.07；正常抽取遵循规则概率。<br>“实物中奖展示”为指定的演示记录，不代表实际中奖。</p>`,'demo');
 }
 function scenario(name){
+  if(!CARD_CAMPAIGN_ENABLED){notify('第一期已归档，历史记录保持不变');return;}
   closeModal();scenarioVersion++;busy=false;mode=name==='real'?'real':'demo';clockReal=Date.now();clockBase=START+12*3600000;
   if(name==='before')clockBase=START-DAY;if(name==='ended')clockBase=END+12*3600000;if(name==='expired')clockBase=START+3*DAY;
   data=fresh(`preview-${Date.now()}`,name==='new'?clockBase-60000:START-DAY);report=null;sample=false;clearCardPhoto();cardBrand='';cardStyle='';
@@ -172,10 +172,7 @@ async function action(a){
       setTimeout(()=>{if(version!==scenarioVersion)return;reloadCampaign();const id=crypto.randomUUID();report={id,at:now(),expert:false};const r=identify(data,{id,kind:'ai'},now());data=r.state;save();busy=false;render();if(r.awarded||r.capped){const options={amount:r.awarded?1:0,source:'AI 鉴定完成',today:dailyCount(data,now()),sharePrompt:r.sharePrompt,day:dayKey(now())};if(window.jianxActive)showGrant(options);else pendingGrant=options;}else notify('模拟鉴定已完成，当前不在活动期间');},800);break;
     }
     case 'expert':showExpert();break;
-    case 'pay-expert':{
-      if(busy||!report||report.expert)return;const use=$('card-dialog').querySelector('[name="expert-pay"]:checked').value==='voucher';
-      const r=payExpert(data,report.id,now(),use);if(r.error){notify(r.error);return;}data=r.state;report.expert=true;save();closeModal();render();if(r.awarded||r.capped)showGrant({amount:r.awarded?1:0,source:use?'专家鉴定券兑换成功':'专家鉴定支付成功',today:dailyCount(data,now()),sharePrompt:r.sharePrompt});else notify('模拟服务已完成，本次未增加抽奖券');break;
-    }
+    case 'pay-expert':showExpert();break;
     case 'draw-welcome':runDraw('welcome',5);break;
     case 'draw-one':runDraw('ordinary',1);break;
     case 'draw-five':runDraw('ordinary',5);break;
