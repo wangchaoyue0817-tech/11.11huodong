@@ -11,6 +11,7 @@ const button=(html,action)=>{
   return tag[0];
 };
 const disabled=(html,action)=>/\bdisabled(?:\s|>|=)/.test(button(html,action));
+const drawHint=(html,count)=>html.match(new RegExp(`<button\\b[^>]*data-action="draw:${count}"[^>]*>[\\s\\S]*?<small>([^<]*)</small>`))?.[1];
 function withOrders(count){
   let state=fresh('center-user');
   for(let i=1;i<=count;i++)state=submitOrder(state,{id:`order-${i}`,category:'美妆'},now+i).state;
@@ -78,6 +79,45 @@ test('draw controls use only the selected pool balance and never mix ordinary an
   const more=claimDaily(state,at).state;
   assert.equal(disabled(expertLotteryMarkup(more,at,{pool:'ordinary'}),'draw:5'),false);
   assert.equal(disabled(expertLotteryMarkup(more,at,{pool:'advanced'}),'draw:5'),true);
+});
+
+test('single and five draw states explain exact shortages for zero, one, four and five same-pool tickets',()=>{
+  for(const pool of ['ordinary','advanced'])for(const amount of [0,1,4,5]){
+    const state=fresh();
+    const other=pool==='ordinary'?'advanced':'ordinary';
+    state.tickets=[
+      {id:'selected-pool',pool,source:'专鉴赠券',amount,remaining:amount,at:now,expiresAt:END},
+      {id:'other-pool',pool:other,source:'专鉴赠券',amount:9,remaining:9,at:now,expiresAt:END}
+    ];
+    const html=expertLotteryMarkup(state,now,{pool}),name=pool==='advanced'?'高级':'普通';
+    for(const count of [1,5]){
+      const tag=button(html,`draw:${count}`);
+      assert.match(tag,/\bclass="[^"]*\bdraw-state-button\b/);
+      assert.match(tag,count===1?/\bcl-secondary\b/:/\bcl-primary\b/);
+      assert.equal(disabled(html,`draw:${count}`),amount<count);
+      assert.equal(drawHint(html,count),amount<count?`还差 ${count-amount} 张${name}券`:count===5?'使用 5 张同种券':`使用 1 张${name}券`);
+    }
+    if(pool==='advanced')assert.match(button(html,'draw:5'),/\bis-premium\b/);
+  }
+});
+
+test('draw state copy prioritizes running and activity availability over ticket shortages',()=>{
+  for(const pool of ['ordinary','advanced']){
+    for(const [at,expected]of [[START-1,'活动尚未开始'],[END,'活动已结束']]){
+      const html=expertLotteryMarkup(fresh(),at,{pool});
+      for(const count of [1,5]){
+        assert.equal(disabled(html,`draw:${count}`),true);
+        assert.equal(drawHint(html,count),expected);
+      }
+    }
+    for(const at of [START-1,now,END]){
+      const html=expertLotteryMarkup(fresh(),at,{pool,drawing:true});
+      for(const count of [1,5]){
+        assert.equal(disabled(html,`draw:${count}`),true);
+        assert.equal(drawHint(html,count),'正在开奖');
+      }
+    }
+  }
 });
 
 test('empty, not-started and ended draws stay disabled even when stored tickets exist',()=>{

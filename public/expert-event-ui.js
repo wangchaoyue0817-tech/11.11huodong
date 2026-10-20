@@ -108,13 +108,19 @@ export function resultMarkup(batch,{canReturn=false}={}){
 
 export function activityHubMarkup(state,now,{pool='ordinary'}={}){
  const balance=balances(state,now),available=active(now),advanced=pool==='advanced';
+ const needsTickets=available&&balance.ordinary+balance.advanced===0;
+ const {current,next}=progressGeometry(eventCount(state)),nextPool=next%10===0?'advanced':'ordinary';
+ const drawHint=count=>!available?(now<START?'活动尚未开始':'活动已结束'):balance[pool]<count?`还差 ${count-balance[pool]} 张${advanced?'高级':'普通'}券`:`使用 ${count} 张${count===5?'同种':advanced?'高级':'普通'}券`;
  return `<div class="ev-hub-top"><div class="ev-hub-tools"><button data-hub-rules>${icon('spark')}规则</button><button data-hub-rank>${icon('crown')}王者榜</button></div></div>
  <div class="ev-hub-pools" role="tablist" aria-label="选择扭蛋奖池">${['ordinary','advanced'].map(value=>`<button role="tab" data-hub-pool="${value}" aria-selected="${pool===value}">${rewardArt(value)}<span><strong>${value==='advanced'?'高级奖池':'普通奖池'}</strong><small>可用 <b>${balance[value]}</b> 张券</small></span><i>${pool===value?icon('check'):''}</i></button>`).join('')}</div>
  <div class="ev-hub-stage">${machineMarkup({pool,compact:true})}</div>
- <div class="ev-hub-draw-controls"><button class="ev-secondary" data-hub-draw="1" ${!available||balance[pool]<1?'disabled':''}><strong>${pool==='ordinary'&&balance.daily?'免费扭一次':'扭一次'}</strong><small>使用 1 张${advanced?'高级':'普通'}券</small></button><button class="ev-primary ${advanced?'ev-gold-primary':''}" data-hub-draw="5" ${!available||balance[pool]<5?'disabled':''}><strong>五次一起扭</strong><small>使用 5 张同种券</small></button></div>
- <p class="ev-hub-expiry">${icon('clock')}${!available?(now<START?'活动尚未开始':'活动已结束，奖品与记录保留'):balance.daily&&pool==='ordinary'?'今日赠券当天有效，扭蛋时优先使用':balance[pool]<1?'当前奖池暂无可用券，去专鉴继续积累':'鉴定获得的抽奖券，活动结束时失效'}</p>
+ ${needsTickets?`<div class="ev-hub-earn">
+ <div class="ev-hub-earn-benefit">${rewardArt(nextPool)}<span>再鉴 <b>${next-current}</b> 单，得 1 张${nextPool==='advanced'?'高级':'普通'}抽奖券</span></div>
+ <button class="ev-primary" data-hub-expert>去专鉴赢抽奖券 ${icon()}</button></div>`:`
+ <div class="ev-hub-draw-controls"><button class="ev-secondary draw-state-button" data-hub-draw="1" ${!available||balance[pool]<1?'disabled':''}><strong>${pool==='ordinary'&&balance.daily?'免费扭一次':'扭一次'}</strong><small>${drawHint(1)}</small></button><button class="ev-primary draw-state-button ${advanced?'ev-gold-primary':''}" data-hub-draw="5" ${!available||balance[pool]<5?'disabled':''}><strong>五次一起扭</strong><small>${drawHint(5)}</small></button></div>
+ <p class="ev-hub-expiry">${icon('clock')}${!available?(now<START?'活动尚未开始':'活动已结束，奖品与记录保留'):balance.daily&&pool==='ordinary'?'今日赠券当天有效，扭蛋时优先使用':balance[pool]<1?'当前奖池暂无可用券，去专鉴继续积累':'鉴定获得的抽奖券，活动结束时失效'}</p>`}
  ${progressMarkup(state)}
- <div class="ev-hub-footer"><button class="ev-text-button" data-hub-prizes>${icon('gift')}我的奖品</button><button class="ev-text-button" data-hub-expert>去专鉴 ${icon()}</button></div>`;
+ <div class="ev-hub-footer"><button class="ev-text-button" data-hub-prizes>${icon('gift')}我的奖品</button>${needsTickets?'':`<button class="ev-text-button" data-hub-expert>去专鉴 ${icon()}</button>`}</div>`;
 }
 
 export function openActivityHub({onChange,pool='ordinary'}={}){

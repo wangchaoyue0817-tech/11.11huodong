@@ -211,12 +211,16 @@ test('used or expired first guide tickets never cause another guide',()=>{
   assert.equal(model.balances(expired.state,T+model.DAY).daily,1);
 });
 
-test('returning to a visible expert page after midnight automatically grants the new daily ticket',()=>{
+test('returning to a visible expert page after midnight silently grants the new daily ticket',()=>{
   const f=fixture();f.enter();f.dialogs[0].close();
   f.document.hidden=true;f.setClock(T+model.DAY);f.visible();
   assert.equal(f.state.tickets.length,2);
   assert.equal(model.balances(f.state,T+model.DAY).daily,1);
   assert.equal(f.dialogs.length,1,'new days do not replay onboarding');
+  assert.equal(f.dialogs.filter(dialog=>dialog.open).length,0,'returning never opens a next-day notice');
+  f.enter();f.visible();
+  assert.equal(f.state.tickets.length,2,'repeated entry keeps the daily grant idempotent');
+  assert.equal(f.dialogs.length,1);
 });
 
 test('calendar refresh grants a new daily ticket when the expert page stays open across midnight',()=>{
@@ -224,9 +228,30 @@ test('calendar refresh grants a new daily ticket when the expert page stays open
   f.setClock(T+model.DAY);f.tick();
   assert.equal(model.balances(f.state,T+model.DAY).daily,1);
   assert.equal(f.state.tickets.length,2);
+  assert.equal(f.dialogs.length,1,'midnight refresh does not create a new notice');
+  assert.equal(f.dialogs.filter(dialog=>dialog.open).length,0);
   f.tick();assert.equal(f.state.tickets.length,2);
   f.setClock(model.END);f.tick();
   assert.deepEqual(model.balances(f.state,model.END),{ordinary:0,advanced:0,daily:0});
+});
+
+test('simulated next-day entry refreshes ticket records without opening a notice or first-time guide',()=>{
+  const f=fixture();
+  f.document.querySelector('[data-eh="demo"]').click();
+  const panel=f.dialogs.at(-1);
+  panel.querySelector('[data-scene="next-day"]').click();f.flush();
+  assert.equal(f.dialogs.length,1,'only the simulation selector was created');
+  assert.equal(panel.open,false);
+  assert.equal(f.dialogs.filter(dialog=>dialog.open).length,0);
+  const inventory=model.ticketInventory(f.state,T+model.DAY);
+  assert.deepEqual(inventory.counts,{unused:1,used:0,expired:1});
+  assert.equal(model.balances(f.state,T+model.DAY).daily,1);
+  assert.equal(f.state.tickets[1].firstGuide,false);
+  assert.equal(f.draws.length,0);
+  assert.equal(f.hubs.length,0);
+  f.enter();f.tick();
+  assert.equal(f.dialogs.length,1);
+  assert.equal(f.state.tickets.length,2);
 });
 
 test('card-expert shell intent suppresses onboarding even though the earlier listener opens expert tab',()=>{

@@ -227,7 +227,95 @@ test('hub disables both draw buttons outside the activity without removing saved
     assert.equal(document.querySelector('[data-hub-draw="5"]').disabled,true);
     assert.match(document.querySelector('.ev-hub-expiry').textContent,new RegExp(text));
     assert.equal(document.querySelector('.ev-progress').dataset.current,'50');
+    assert.equal(document.querySelector('.ev-hub-earn'),null);
   }
+});
+
+test('empty ticket wallets replace disabled draw controls with one primary expert action and the actual next reward',()=>{
+  for(const [count,gap,pool]of [[0,2,'普通'],[1,1,'普通'],[9,1,'高级'],[10,2,'普通'],[19,1,'高级']]) {
+    const state=orders(count);
+    state.tickets.forEach(ticket=>ticket.remaining=0);
+    for(const selected of ['ordinary','advanced']) {
+      const document=view(activityHubMarkup(state,T+1000,{pool:selected}));
+      const cta=document.querySelector('[data-hub-expert]');
+      assert.equal(cta.classList.contains('ev-primary'),true);
+      assert.match(cta.textContent,/去专鉴赢抽奖券/);
+      assert.equal(document.querySelectorAll('[data-hub-expert]').length,1);
+      assert.equal(document.querySelectorAll('[data-hub-draw]').length,0);
+      assert.match(document.querySelector('.ev-hub-earn-benefit').textContent,new RegExp(`再鉴\\s*${gap}\\s*单，得 1 张${pool}抽奖券`));
+      assert.equal(document.querySelector('.ev-progress').dataset.current,String(count));
+      assert(document.querySelector('[data-hub-prizes]'));
+    }
+  }
+});
+
+test('tickets remaining in either pool retain draw controls even when the selected pool is empty',()=>{
+  for(const remainingPool of ['ordinary','advanced']) {
+    const state=orders(10);
+    state.tickets.forEach(ticket=>{if(ticket.pool!==remainingPool)ticket.remaining=0;});
+    const document=view(activityHubMarkup(state,T+1000,{pool:remainingPool==='ordinary'?'advanced':'ordinary'}));
+    assert.equal(document.querySelector('.ev-hub-earn'),null);
+    assert.equal(document.querySelectorAll('[data-hub-draw]').length,2);
+    assert.equal(document.querySelector('[data-hub-draw="1"]').disabled,true);
+  }
+});
+
+test('expired daily tickets do not hide the empty-wallet action',()=>{
+  const state=claimDaily(fresh(),T).state;
+  const document=view(activityHubMarkup(state,T+24*3600000));
+  assert(document.querySelector('.ev-hub-earn'));
+  assert.equal(document.querySelectorAll('[data-hub-draw]').length,0);
+});
+
+test('draw controls explain disabled states by selected-pool shortage, separately from activity availability',()=>{
+  for(const pool of ['ordinary','advanced'])for(const amount of [0,1,4,5]) {
+    const state=orders(50);
+    state.tickets=state.tickets.filter(ticket=>ticket.pool!==pool);
+    state.tickets.push({id:'available',pool,remaining:amount,amount,at:T,expiresAt:END});
+    const document=view(activityHubMarkup(state,T+1000,{pool}));
+    for(const count of [1,5]) {
+      const button=document.querySelector(`[data-hub-draw="${count}"]`);
+      assert.equal(button.disabled,amount<count);
+      assert.equal(button.querySelector('small').textContent,amount<count?`还差 ${count-amount} 张${pool==='advanced'?'高级':'普通'}券`:`使用 ${count} 张${count===5?'同种':pool==='advanced'?'高级':'普通'}券`);
+    }
+  }
+  for(const [now,label]of [[START-1,'活动尚未开始'],[END,'活动已结束']]) {
+    const document=view(activityHubMarkup(orders(50),now));
+    for(const button of document.querySelectorAll('[data-hub-draw]')) {
+      assert.equal(button.disabled,true);
+      assert.equal(button.querySelector('small').textContent,label);
+    }
+  }
+});
+
+test('empty-wallet primary action opens the category picker once and closes the hub without changing rewards',t=>{
+  const state=orders(1),{dialog,window,navigations}=dialogHarness(t,state);
+  let selections=0;window.openExpertSelection=()=>selections++;
+  openActivityHub();
+  dialog().querySelector('[data-hub-expert]').click();
+  assert.equal(selections,1);
+  assert.equal(dialog(),null);
+  assert.equal(navigations.length,0);
+  assert.deepEqual(loadEvent(),state);
+});
+
+test('empty-wallet primary action also routes from a standalone activity surface',t=>{
+  const {dialog,navigations}=dialogHarness(t,orders(1));
+  openActivityHub();
+  dialog().querySelector('[data-hub-expert]').click();
+  assert.deepEqual(navigations,[['expert',{intent:'open-expert'}]]);
+  assert.equal(dialog(),null);
+});
+
+test('consuming the last ticket changes the reopened hub to the primary expert action',t=>{
+  const state=orders(2),{dialog}=dialogHarness(t,state);
+  openActivityHub();
+  dialog().querySelector('[data-hub-draw="1"]').click();
+  dialog().querySelector('[data-skip]').click();
+  dialog().querySelector('[data-result-back]').click();
+  assert(dialog().querySelector('.ev-hub-earn'));
+  assert.equal(dialog().querySelectorAll('[data-hub-draw]').length,0);
+  assert.equal(loadEvent().draws.length,1);
 });
 
 test('explicit ranking scenarios remain intact without the generic leaderboard fixture',()=>{

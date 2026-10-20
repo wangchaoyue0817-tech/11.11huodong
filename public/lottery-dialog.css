@@ -97,6 +97,12 @@
 .ev-hub-draw-controls small{font-size:10px;font-weight:400;opacity:.85}
 .ev-hub-expiry{display:flex;justify-content:center;align-items:center;gap:4px;color:var(--ld-copy);font-size:11px;margin:9px 0 0;line-height:1.6}
 .ev-hub-expiry .ev-icon{width:13px;height:13px}
+.ev-hub-earn{display:grid;gap:6px;margin-top:-2px}
+.ev-hub-earn-benefit{display:flex;align-items:center;justify-content:center;gap:5px;min-height:30px;color:#e3d5f9;font-size:12px}
+.ev-hub-earn-benefit .ev-reward-art{width:38px;height:28px;object-fit:contain}
+.ev-hub-earn-benefit b{color:#f5e7ff;font-size:16px;font-weight:650}
+.ev-dialog .ev-hub-earn>.ev-primary{width:100%;min-height:52px;font-size:16px;gap:9px;box-shadow:inset 0 1px #f4e8ff70,0 8px 28px #9861ed44}
+.ev-hub-earn~.ev-progress .ev-progress-note{display:none}
 .ev-hub-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #b89aec20;padding-top:3px}
 .ev-hub-footer .ev-text-button{gap:4px}
 .ev-hub-footer .ev-icon{width:15px;height:15px}

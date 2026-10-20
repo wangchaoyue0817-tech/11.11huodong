@@ -9,7 +9,7 @@ export const DEMO_SCENE_GROUPS = [
   {id:'onboarding',label:'新手体验',scenes:[
     {id:'first',label:'首次进入',description:'领取今日赠券，重新体验免费扭蛋引导'},
     {id:'daily-used',label:'今日免费券已用完',description:'查看去专鉴引导与暂无可用券状态'},
-    {id:'next-day',label:'次日重新进入',description:'昨日赠券已过期，今日重新领取 1 张'}
+    {id:'next-day',label:'次日重新进入',description:'昨日赠券过期，今日赠券静默刷新'}
   ]},
   {id:'progress',label:'累计进度',scenes:[
     {id:'progress-1',label:'累计 1 单',description:'再提交 1 单即可获得普通券'},
@@ -171,7 +171,7 @@ export function buildDemoScene(id,options={}) {
   if(id==='next-day') {
     let state=claimDaily(fresh(),now).state;
     state=claimDaily(state,now+DAY).state;
-    return {...result,state,now:now+DAY,notice:'昨日赠券已过期，今日免费券已到账',guide:false};
+    return {...result,state,now:now+DAY,guide:false};
   }
   if(id.startsWith('progress-')) {
     const count=Number(id.slice('progress-'.length));

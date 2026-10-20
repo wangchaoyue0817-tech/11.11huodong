@@ -222,6 +222,7 @@ function startInlineDraw(count){
  // Lock before saving: storage notifications must not replace a running machine.
  drawing=true;saveEvent(response.state);
  $('ac-content').querySelectorAll('[data-action^="draw:"],[data-action^="pool:"]').forEach(button=>button.disabled=true);
+ $('ac-content').querySelectorAll('[data-action^="draw:"] small').forEach(hint=>hint.textContent='正在开奖');
  $('ac-content').querySelector('[data-action="skip-draw"]').hidden=false;
  machineController=mountMachine($('ac-content').querySelector('.gm-machine'));
  machineController.play({count,pool:selectedPool,onReveal:()=>{

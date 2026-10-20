@@ -44,8 +44,11 @@ test('used-daily scene records its first draw and cannot draw again without appr
   assert.equal(scene.state.draws[0].rewards[0].type,'none');
 });
 
-test('next day preserves yesterday as expired while new gift follows normal probabilities',()=>{
+test('next day silently refreshes its gift, preserves yesterday as expired and uses normal probabilities',()=>{
   const scene=buildDemoScene('next-day'),inventory=ticketInventory(scene.state,scene.now);
+  assert.equal(scene.guide,false);
+  assert.equal(scene.notice,undefined);
+  assert.equal(scene.destination,'home');
   assert.equal(inventory.counts.expired,1);
   assert.equal(inventory.counts.unused,1);
   assert.equal(scene.state.tickets[1].firstGuide,false);

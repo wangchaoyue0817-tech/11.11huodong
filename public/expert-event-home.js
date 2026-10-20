@@ -113,7 +113,6 @@ function runDemoScene(id,options={}){
  else if(scene.destination==='upload')openUpload(scene.selection);
  else if(scene.destination==='lottery')window.jianxNavigate?.('lottery',{event:scene.event,pool:scene.pool,ticketStatus:scene.ticketStatus});
  else enterEvent();
- if(scene.notice)showEventDialog('每日赠券',`<div class="eh-day-notice"><img src="assets/gacha/reward-ordinary-v6.png" alt="普通抽奖券"><h2>${esc(scene.notice)}</h2><p>每日赠券仅限当天使用，活动获得的里程碑券可保留至活动结束。</p><button class="ev-primary" data-day-hub>去扭蛋 ${icon()}</button></div>`).querySelector('[data-day-hub]').onclick=()=>openActivityHub();
 }
 function openDrawSetup(){
  const options=[['random','自然随机'],['physical','抽中实物'],['voucher','抽中鉴定券'],['none','再接再厉'],['mixed','五连混合结果']];
