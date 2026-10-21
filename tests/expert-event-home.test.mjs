@@ -183,6 +183,80 @@ test('eligible upload opens progress after submission while card upload never op
   }
 });
 
+test('pending and all three completed report states omit inline activity progress and the continue-appraisal action',()=>{
+  for(const [result,label]of [[null,'专家正在鉴别中'],['true','专家结论：鉴真'],['false','专家结论：鉴假'],['unknown','专家结论：暂无法判断']]){
+    const f=fixture();
+    f.window.onExpertSelected({category:'美妆',name:'报告回归商品'});f.flush();
+    f.document.querySelector('[data-submit]').click();f.flush();
+    assert.equal(f.progress.length,1,'the automatic submission popup remains available');
+    assert.deepEqual(f.progress[0],{reward:null});
+    if(result)f.document.querySelector(`[data-result="${result}"]`).click();
+    const before=structuredClone(f.state);
+    // The report also refreshes on shared event-state notifications.
+    f.setState(f.state);f.flush();
+    const report=f.document.querySelector('.eh-flow');
+    assert.equal(report.querySelector('.eh-flow-nav strong').textContent,'鉴别报告');
+    assert.equal(report.querySelector('.eh-report-hero h1').textContent,'报告回归商品');
+    assert.equal(report.querySelector('.eh-report-result h2').textContent,label);
+    assert.match(report.querySelector('.eh-report-status').textContent,result?/已完成/:/专家已派单/);
+    assert.equal(f.state.orders.at(-1).result,result);
+    for(const selector of ['.eh-report-progress','.ev-progress','[data-report-progress]','[data-next-order]']){
+      assert.equal(report.querySelector(selector),null,`${selector} must be removed in ${result||'pending'} reports`);
+    }
+    assert.doesNotMatch(report.textContent,/查看专鉴活动进度|继续免费专鉴|我的专鉴进度/);
+    assert.equal(report.querySelectorAll('[data-result]').length,3,'the result simulator remains usable');
+    assert(report.querySelectorAll('[data-result]').every(button=>button.disabled===Boolean(result)));
+    assert.equal(f.progress.length,1,'report refreshes never reopen the award popup');
+    assert.deepEqual(f.state,before,'rendering the completed report must not change order or reward data');
+  }
+});
+
+test('report simplification preserves ordinary and advanced submission rewards without awarding again on result refresh',()=>{
+  for(const [previousCount,pool]of [[1,'ordinary'],[9,'advanced']]){
+    let initial=model.fresh();
+    for(let i=1;i<=previousCount;i++)initial=model.submitOrder(initial,{id:`earlier-${i}`,category:'美妆'},T-100+i).state;
+    const before=model.balances(initial,T),f=fixture({initial});
+    f.window.onExpertSelected({category:'美妆',name:'里程碑商品'});f.flush();
+    f.document.querySelector('[data-submit]').click();f.flush();
+    assert.equal(eventCount(f.state),previousCount+1);
+    assert.equal(f.state.tickets.length,initial.tickets.length+1);
+    assert.equal(f.state.tickets.at(-1).pool,pool);
+    assert.equal(f.state.tickets.at(-1).remaining,1);
+    const expected={...before,[pool]:before[pool]+1};
+    assert.deepEqual(model.balances(f.state,T),expected);
+    assert.deepEqual(f.progress,[{reward:{pool,amount:1}}]);
+    f.document.querySelector('[data-result="true"]').click();
+    f.setState(f.state);f.flush();
+    assert.equal(eventCount(f.state),previousCount+1);
+    assert.deepEqual(model.balances(f.state,T),expected);
+    assert.equal(f.state.tickets.length,initial.tickets.length+1);
+    assert.deepEqual(f.progress,[{reward:{pool,amount:1}}]);
+    assert.match(f.document.querySelector('.eh-report-result h2').textContent,/专家结论：鉴真/);
+  }
+});
+
+test('excluded report categories do not advance an existing nine-order milestone or open its reward popup',()=>{
+  let initial=model.fresh();
+  for(let i=1;i<=9;i++)initial=model.submitOrder(initial,{id:`eligible-${i}`,category:'美妆'},T-100+i).state;
+  for(const category of ['卡牌','配饰']){
+    const f=fixture({initial});
+    f.window.onExpertSelected({category,name:'非活动品类商品'});f.flush();
+    f.document.querySelector('[data-submit]').click();f.flush();
+    assert.equal(f.progress.length,0);
+    assert.equal(eventCount(f.state),9);
+    assert.equal(f.state.orders.at(-1).eligible,false);
+    assert.deepEqual(f.state.tickets,initial.tickets);
+    assert(f.document.querySelector('.eh-report-result'));
+    assert.equal(f.document.querySelector('.eh-report-progress'),null);
+    assert.equal(f.document.querySelector('[data-next-order]'),null);
+    f.document.querySelector('[data-result="false"]').click();f.flush();
+    assert.equal(f.progress.length,0);
+    assert.equal(eventCount(f.state),9);
+    assert.deepEqual(f.state.tickets,initial.tickets);
+    assert.match(f.document.querySelector('.eh-report-result h2').textContent,/专家结论：鉴假/);
+  }
+});
+
 test('a first ticket claimed in the center still gets its guide once on the expert homepage',()=>{
   const initial=model.claimDaily(model.fresh(),T).state;
   const f=fixture({initial});f.enter();

@@ -94,14 +94,10 @@ function renderReport(){
  flow.querySelector('.eh-flow-body').innerHTML=`<div class="eh-report-hero"><span class="ev-eyebrow">图灵专家鉴别报告</span><h1>${esc(product?.name||order.product)}</h1><p>${esc(order.category)} · 订单 ${esc(order.id.slice(-8).toUpperCase())}</p><span class="eh-report-status">${icon('shield')} ${order.result?'已完成':'专家已派单'}</span></div>
  <div class="eh-report-metrics"><span>服务方式<b>专家鉴别</b></span><span>鉴别状态<b>${resultLabel}</b></span><span>点位数量<b>5 个</b></span></div>
  <div class="eh-report-result"><div class="eh-section-label"><strong>图灵专家鉴别结果</strong><span>${order.result?'已完成':'已派单'}</span></div><div class="eh-result-shield ${order.result==='false'?'is-false':''}">${icon('shield')}</div><h2>${order.result?`专家结论：${resultLabel}`:'专家正在鉴别中'}</h2><p>${order.result?'当前为模拟结果，用于体验鉴别与榜单联动。':'评估完成后，你可以在此查看专家结论。'}</p></div>
- ${order.eligible?`<div class="eh-report-progress">${progressMarkup(s)}<button class="ev-secondary ev-full" data-report-progress>查看专鉴活动进度 ${icon()}</button></div>`:''}
- <details class="eh-demo-results"><summary>演示：生成专家结果</summary><p>仅用于体验报告与排行榜的联动</p><div>${[['true','鉴真'],['false','鉴假'],['unknown','无法判断']].map(([value,text])=>`<button data-result="${value}" ${order.result?'disabled':''}>${text}</button>`).join('')}</div></details>
- <button class="ev-primary" data-next-order>继续免费专鉴 ${icon()}</button>`;
- flow.querySelector('[data-report-progress]')?.addEventListener('click',()=>openProgress());
+ <details class="eh-demo-results"><summary>演示：生成专家结果</summary><p>仅用于体验报告与排行榜的联动</p><div>${[['true','鉴真'],['false','鉴假'],['unknown','无法判断']].map(([value,text])=>`<button data-result="${value}" ${order.result?'disabled':''}>${text}</button>`).join('')}</div></details>`;
  flow.querySelectorAll('[data-result]').forEach(b=>b.onclick=()=>{
   const r=completeOrder(loadEvent(),reportId,b.dataset.result,eventNow());saveEvent(r.state);renderReport();
  });
- flow.querySelector('[data-next-order]').onclick=()=>window.openExpertSelection();focusProgress(flow);
 }
 function runDemoScene(id,options={}){
  closeEventDialog();closeFlow();lastScene={id,options:{...options}};
