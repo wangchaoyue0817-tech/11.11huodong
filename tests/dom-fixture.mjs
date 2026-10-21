@@ -141,6 +141,9 @@ export class FixtureElement {
     const listeners = this.events.get(type) || [];
     listeners.push(listener); this.events.set(type, listeners);
   }
+  removeEventListener(type, listener) {
+    this.events.set(type, (this.events.get(type) || []).filter(item => item !== listener));
+  }
   dispatchEvent(event) {
     if (!event.target) event.target = this;
     event.preventDefault ||= () => { event.defaultPrevented = true; };

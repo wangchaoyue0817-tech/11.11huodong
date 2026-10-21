@@ -10,9 +10,8 @@ import {rulesMarkup} from './reward-ui.js';
 import * as EventUI from './expert-event-ui.js';
 export {prizeMarkup} from './center-prizes.js';
 
-const {START, END, VOUCHER_END, PRIZES, active, balances, claimDaily, ticketInventory} = EventModel;
+const {START, END, VOUCHER_END, PRIZES, ACTIVITY_CATEGORIES, active, balances, claimDaily, ticketInventory} = EventModel;
 const CARD_KEY = 'jianx-card-preview-v1';
-const eligibleNames = ['美妆', '包袋', '鞋靴', '服饰', '手表', '数码3C'];
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const time = value => Number.isFinite(value) ? new Intl.DateTimeFormat('zh-CN', {timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(value) : '时间待确认';
 const date = value => Number.isFinite(value) ? new Intl.DateTimeFormat('zh-CN', {timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(value) : '以原活动记录为准';
@@ -39,7 +38,7 @@ export function earnedPrizes(state) {
 }
 
 export function eligibleOrderCount(state) {
-  return (state.orders || []).filter(order => order.uid === state.uid && order.eligible !== false && active(order.at) && (EventModel.isEligibleCategory ? EventModel.isEligibleCategory(order.category) : eligibleNames.includes(order.category))).length;
+  return (state.orders || []).filter(order => order.uid === state.uid && order.eligible !== false && active(order.at) && EventModel.isEligibleCategory(order.category)).length;
 }
 
 export function resolveActivityNavigation(current, message = {}) {
@@ -124,10 +123,10 @@ function ticketFilters(inventory) {
   return `<div class="ac-filter-row" aria-label="抽奖券状态">${[['unused','未使用'],['used','已使用'],['expired','已过期']].map(([key,label]) => `<button aria-pressed="${ticketStatus === key}" data-action="ticket:${key}">${label} ${inventory.counts[key] || 0}</button>`).join('')}<span class="ac-filter-spacer"></span><button data-action="earning-history">获得记录</button></div>`;
 }
 
-function eventRules(state) {
+export function eventRules(state) {
   return `<div class="ac-rules"><h3>参与规则</h3><ol>
     <li>活动时间为 2026 年 10 月 27 日 00:00 至 11 月 11 日 00:00（北京时间）。11 月 11 日当天已结束。</li>
-    <li>美妆、包袋、鞋靴、服饰、手表、数码3C 专家鉴定提交成功后计入活动。累计每 2 单送 1 张普通抽奖券，每 10 单送 1 张高级抽奖券，该节点不同时赠送普通券。跨天累计，无上限。</li>
+    <li>${ACTIVITY_CATEGORIES.map(category => escapeHTML(category.name)).join('、')} 专家鉴定提交成功后计入活动。累计每 2 单送 1 张普通抽奖券，每 10 单送 1 张高级抽奖券，该节点不同时赠送普通券。跨天累计，无上限。</li>
     <li>每天首次进入自动赠送 1 张普通抽奖券，仅当天有效，未使用不延续到次日。鉴定获得的抽奖券在活动结束时失效，使用时优先消耗即将到期的券。</li>
     <li>先选择券种，再单次或五次抽取。五连扭蛋消耗 5 张同类券，普通券与高级券不能混用。</li>
     <li>本活动普通池与高级池合计，每位用户最多获得 1 次实物奖品，与卡牌活动独立。各池内有库存的实物等概率抽取。实物全部抽完或用户已中过实物时，实物概率转为鉴定券：鉴定券 80%，再接再厉 20%。</li>

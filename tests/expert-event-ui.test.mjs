@@ -5,7 +5,7 @@ import {START,END,VOUCHER_END,fresh,submitOrder,claimDaily} from '../public/expe
 import {loadEvent,saveEvent,setEventClock} from '../public/expert-event-session.js';
 import {
   eventCount,progressGeometry,progressMarkup,focusProgress,resultMarkup,activityHubMarkup,
-  rankingState,openActivityHub,openDraw,closeEventDialog,openRules,openProgress,openLeaderboard
+  rankingState,openActivityHub,openDraw,closeEventDialog,openRules,openProgress,openLeaderboard,showEventDialog
 } from '../public/expert-event-ui.js';
 
 const T=START+10*3600000;
@@ -101,21 +101,22 @@ test('progress excludes card and other categories, other users, and submissions 
   assert.match(view(progressMarkup(state)).querySelector('.ev-progress-heading').textContent,/已完成\s*2\s*单/);
 });
 
-test('all six approved category groups contribute to the same progress count',()=>{
+test('all seven approved category groups contribute to the same progress count',()=>{
   let state=fresh();
-  ['beauty','bags','footwear','apparel','watches','electronics-appliances'].forEach((category,index)=>{
+  ['beauty','bags','footwear','apparel','watches','electronics-appliances','electronics-nondestructive'].forEach((category,index)=>{
     state=submitOrder(state,{id:`group-${index}`,category},T).state;
   });
-  assert.equal(eventCount(state),6);
-  assert.match(view(progressMarkup(state)).querySelector('.ev-progress-note').textContent,/距高级券\s*4\s*单/);
+  assert.equal(eventCount(state),7);
+  assert.match(view(progressMarkup(state)).querySelector('.ev-progress-note').textContent,/距高级券\s*3\s*单/);
 });
 
 test('a no-prize single draw shows encouragement and directs the user to expert identification',()=>{
   const document=view(resultMarkup({pool:'ordinary',rewards:[{id:'no-prize',type:'none'}]}));
   assert.equal(document.querySelector('h2').textContent,'再接再厉');
-  assert.equal(document.querySelectorAll('.ev-result-card').length,1);
-  assert.equal(document.querySelector('.ev-result-card').classList.contains('is-empty'),true);
-  assert.equal(document.querySelector('.ev-result-card strong').textContent,'再接再厉');
+  assert.equal(document.querySelectorAll('[data-comfort]').length,1);
+  assert.equal(document.querySelector('[data-comfort]').dataset.emptyCount,'1');
+  assert(document.querySelector('[data-comfort-hug]'));
+  assert.match(document.querySelector('[data-comfort-caption]').textContent,/抱抱/);
   assert.equal(document.querySelectorAll('.is-physical').length,0);
   assert.match(document.querySelector('[data-result-expert]').textContent,/去专鉴/);
   assert.doesNotMatch(document.querySelector('.ev-result-heading').textContent,/好礼已抵达/);
@@ -147,7 +148,9 @@ test('five draw results retain each blank result and distinguish the actual phys
 test('five blanks do not become a five-prize celebration',()=>{
   const document=view(resultMarkup({pool:'ordinary',rewards:Array.from({length:5},(_,index)=>({id:`empty-${index}`,type:'none'}))}));
   assert.equal(document.querySelector('h2').textContent,'再接再厉');
-  assert.equal(document.querySelectorAll('.ev-result-card.is-empty').length,5);
+  assert.equal(document.querySelectorAll('[data-comfort]').length,1);
+  assert.equal(document.querySelector('[data-comfort]').dataset.emptyCount,'5');
+  assert.match(document.querySelector('.gc-batch-note').textContent,/5 枚扭蛋均为再接再厉/);
   assert.doesNotMatch(document.querySelector('.ev-result-heading').textContent,/好礼已抵达/);
 });
 
@@ -566,4 +569,36 @@ test('results use the strongest actual prize tier and make the appropriate next 
   assert.equal(hub.querySelectorAll('[data-hub-prizes]').length,1);
   assert.equal(hub.querySelector('[data-hub-center]'),null);
   assert.equal(hub.querySelector('.ev-hub-intro'),null);
+});
+
+for (const count of [1,5]) test(`all-miss ${count}-draw comfort interaction neither redraws nor spends more tickets`,t=>{
+  const {dialog}=dialogHarness(t,orders(20));
+  let changes=0;
+  openDraw({count,random:()=>.99,onChange:()=>changes++});
+  const saved=loadEvent();
+  dialog().querySelector('[data-skip]').click();
+  const hug=dialog().querySelector('[data-comfort-hug]');
+  hug.click();hug.click();
+  assert.match(dialog().querySelector('[data-comfort-caption]').textContent,/抱抱已送达/);
+  assert.deepEqual(loadEvent(),saved);
+  assert.equal(changes,1);
+  assert.equal(saved.draws[0].rewards.length,count);
+  dialog().close('dismiss');
+  assert.equal(hug.events.get('click').length,0);
+  assert.deepEqual(loadEvent(),saved);
+});
+
+test('historical no-prize dialog mounts the same comforting interaction without mutating records',t=>{
+  const state=orders(20),{dialog}=dialogHarness(t,state);
+  showEventDialog('扭蛋结果',resultMarkup({pool:'ordinary',rewards:[{type:'none'}]}));
+  dialog().querySelector('[data-comfort-hug]').click();
+  assert.match(dialog().querySelector('[data-comfort-caption]').textContent,/抱抱已送达/);
+  assert.deepEqual(loadEvent(),state);
+});
+
+test('activity rules list the seven eligible catalog categories',t=>{
+  const {dialog}=dialogHarness(t);openRules();
+  const copy=dialog().querySelector('.ev-rules').textContent;
+  assert.match(copy,/美妆、包袋、鞋靴、服饰、手表、数码家电、3C无损/);
+  assert.doesNotMatch(copy,/六大品类|数码 3C|美妆无损/);
 });

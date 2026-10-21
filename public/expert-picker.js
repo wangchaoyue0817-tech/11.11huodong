@@ -6,6 +6,7 @@
  const glyph=file=>`<span class="ep-icon" aria-hidden="true" style="--ep-icon:url('assets/icons/${file}.svg')"></span>`;
  const styleInfo=s=>typeof s==='string'?{name:s}:s;
  const price=c=>`¥${(c.price/100).toFixed(2)}`;
+ const {isEligibleCategory}=globalThis.JianxExpertEventCategories;
  const picker={open:false,view:'categories',category:null,group:null,style:null,categoryScroll:0,focusReturn:null,inert:[],confirmed:false,feedback:''};
  const root=document.createElement('div');
  root.id='expertPickerRoot';root.className='expert-picker-root';root.hidden=true;
@@ -43,7 +44,7 @@
  </section>`;
  app.append(root);
  const catalog=EXPERT_CATALOG;
- e('epCategoryGrid').innerHTML=catalog.map((c,i)=>`<button class="ep-category-card tone-${i%3}" data-ep-category="${i}" type="button" aria-label="${html(c.name)}，原价${price(c)}，限时免费0元"><span class="ep-category-emblem"><span class="ep-category-icon" style="--ep-icon:url('assets/icons/${c.icon}')" aria-hidden="true"></span></span><span class="ep-category-copy"><span class="ep-category-name">${html(c.name)}</span><span class="ep-category-price"><del>${price(c)}</del><strong>0<small>元</small></strong></span></span><span class="ep-category-enter">${glyph('caret-right')}</span></button>`).join('');
+ e('epCategoryGrid').innerHTML=catalog.map((c,i)=>{const activity=isEligibleCategory(c);return `<button class="ep-category-card tone-${i%3}${activity?' has-activity':''}" data-ep-category="${i}" type="button" aria-label="${html(c.name)}，原价${price(c)}，限时免费0元${activity?'，参与双11活动':''}">${activity?'<span class="ep-category-activity" aria-hidden="true">活动</span>':''}<span class="ep-category-emblem"><span class="ep-category-icon" style="--ep-icon:url('assets/icons/${c.icon}')" aria-hidden="true"></span></span><span class="ep-category-copy"><span class="ep-category-name">${html(c.name)}</span><span class="ep-category-price"><del>${price(c)}</del><strong>0<small>元</small></strong></span></span><span class="ep-category-enter">${glyph('caret-right')}</span></button>`;}).join('');
  const tabOrder=['bags','footwear','beauty','beauty-nondestructive','electronics-nondestructive'];
  const tabCatalog=[...catalog].sort((a,b)=>(tabOrder.includes(a.id)?tabOrder.indexOf(a.id):99)-(tabOrder.includes(b.id)?tabOrder.indexOf(b.id):99));
  e('epCategoryTabs').innerHTML=tabCatalog.map(c=>{const i=catalog.indexOf(c);return `<button type="button" data-ep-category="${i}" aria-pressed="false">${html(c.name)}</button>`;}).join('');

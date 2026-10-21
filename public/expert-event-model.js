@@ -1,3 +1,5 @@
+import './expert-event-categories.js';
+
 // The expert event is independent of the earlier card campaign.
 export const START = Date.parse('2026-10-27T00:00:00+08:00');
 export const END = Date.parse('2026-11-11T00:00:00+08:00');
@@ -16,19 +18,8 @@ export const PRIZES = [
 
 export const active = now => Number.isFinite(now) && now >= START && now < END;
 export const dayKey = now => new Date(now + 8 * 3600000).toISOString().slice(0,10);
-const eligibleCategories=new Set([
-  '美妆','美妆无损','beauty','beauty-nondestructive','鉴美妆',
-  '包袋','bags','鉴包袋',
-  '鞋靴','footwear','鉴鞋靴',
-  '服饰','潮服','apparel','鉴服饰','鉴潮服',
-  '手表','腕表','watches','鉴手表','鉴腕表',
-  '数码3c','数码','3c','数码家电','3c无损','electronics-appliances','electronics-nondestructive',
-  '鉴数码','鉴数码3c'
-]);
-export function isEligibleCategory(category) {
-  const value=typeof category==='object'&&category!==null?category.id||category.name:category;
-  return typeof value==='string'&&eligibleCategories.has(value.trim().toLowerCase().replace(/\s+/g,''));
-}
+export const isEligibleCategory = globalThis.JianxExpertEventCategories.isEligibleCategory;
+export const ACTIVITY_CATEGORIES = globalThis.JianxExpertEventCategories.categories;
 const clone = state => structuredClone(state);
 const eventOrder = order => order.eligible!==false&&isEligibleCategory(order.category)&&active(order.at);
 const ownOrders = state => state.orders.filter(order => order.uid===state.uid&&eventOrder(order));

@@ -67,16 +67,48 @@ test('eligible expert orders count on submission, without a daily cap or result 
   assert(state.tickets.every(ticket => ticket.expiresAt===END));
 });
 
-test('six category groups use exact catalog names and IDs; other free categories are excluded',() => {
+test('seven activity categories use exact catalog names and IDs; other free categories are excluded',() => {
   for(const category of [
-    '美妆','beauty','美妆无损','beauty-nondestructive','包袋','bags','鞋靴','footwear',
+    '美妆','beauty','包袋','bags','鞋靴','footwear',
     '服饰','潮服','apparel','手表','腕表','watches','数码3C','数码家电','3C无损',
     'electronics-appliances','electronics-nondestructive','数码','3C',{id:'beauty',name:'美妆'}
   ])assert.equal(isEligibleCategory(category),true,JSON.stringify(category));
   for(const category of [
     '卡牌','trading-cards','配饰','accessories','JK制服','jk-uniforms','服饰签名',
-    '美妆周边','手表配饰','数码玩具','',null,undefined,{id:'trading-cards',name:'美妆'}
+    '美妆无损','beauty-nondestructive','美妆周边','手表配饰','数码玩具','',null,undefined,{id:'trading-cards',name:'美妆'}
   ])assert.equal(isEligibleCategory(category),false,JSON.stringify(category));
+});
+
+test('each of the seven activity categories counts submissions and awards ordinary and advanced milestones',() => {
+  for(const category of ['美妆','包袋','鞋靴','服饰','手表','数码家电','3C无损']) {
+    let state=fresh();
+    for(let ordinal=1;ordinal<=10;ordinal++) {
+      const submitted=submitOrder(state,{id:`${category}-${ordinal}`,category},T+ordinal);
+      assert.equal(submitted.excluded,false,category);
+      assert.equal(submitted.order.ordinal,ordinal,category);
+      assert.deepEqual(submitted.reward,ordinal%2===0?{pool:ordinal===10?'advanced':'ordinary',amount:1}:null,category);
+      state=completeOrder(submitted.state,submitted.order.id,'true',T+20+ordinal).state;
+    }
+    assert.deepEqual(balances(state,T+100),{ordinary:4,advanced:1,daily:0},category);
+    assert.equal(leaderboard(state,'true')[0].count,10,category);
+  }
+});
+
+test('beauty nondestructive orders remain separate from beauty activity progress and rankings',() => {
+  for(const category of ['美妆无损','beauty-nondestructive',{id:'beauty-nondestructive',name:'美妆无损'}]) {
+    let state=fresh();
+    for(let i=1;i<=10;i++) {
+      const submitted=submitOrder(state,{id:`excluded-${i}`,category},T+i);
+      assert.equal(submitted.excluded,true);
+      assert.equal(submitted.order.ordinal,null);
+      assert.equal(submitted.reward,null);
+      const complete=completeOrder(submitted.state,submitted.order.id,'true',T+20+i);
+      assert.equal(complete.counted,false);
+      state=complete.state;
+    }
+    assert.deepEqual(balances(state,T+100),{ordinary:0,advanced:0,daily:0});
+    assert.deepEqual(leaderboard(state,'true'),[]);
+  }
 });
 
 test('excluded categories and orders outside event remain free orders without milestones or leaderboard counts',() => {

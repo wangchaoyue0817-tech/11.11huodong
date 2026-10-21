@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {createDocument} from './dom-fixture.mjs';
+import {isEligibleCategory} from '../public/expert-event-model.js';
 
 const source = filename => readFileSync(new URL(`../public/${filename}`, import.meta.url), 'utf8');
 function fixture() {
@@ -16,7 +17,7 @@ function fixture() {
     ResizeObserver: class { observe() {} },
     requestAnimationFrame() {}, setInterval() {}, clearInterval() {}, setTimeout() {}, clearTimeout() {}
   });
-  for (const filename of ['data.js', 'assets/icon-map.js', 'app.js', 'expert-catalog.js', 'expert-picker.js']) {
+  for (const filename of ['data.js', 'assets/icon-map.js', 'app.js', 'expert-catalog.js', 'expert-event-categories.js', 'expert-picker.js']) {
     vm.runInContext(source(filename), context, {filename});
   }
   return {document, window, context, node: id => document.getElementById(id), catalog: vm.runInContext('EXPERT_CATALOG', context)};
@@ -69,6 +70,30 @@ test('all 28 categories retain original prices while displaying free expert appr
     }
   }
   assert.ok(checkedGroups >= 28 && checkedStyles >= checkedGroups);
+});
+
+test('exactly seven catalog categories show the activity corner badge and share model eligibility', () => {
+  const f = fixture();
+  const expected = ['3C无损','包袋','服饰','数码家电','手表','美妆','鞋靴'].sort();
+  const marked = [];
+  for (const [index, category] of f.catalog.entries()) {
+    const card = f.node('epCategoryGrid').children[index];
+    const badge = card.querySelector('.ep-category-activity');
+    assert.equal(Boolean(badge), isEligibleCategory(category), category.name);
+    assert.equal(card.classList.contains('has-activity'), Boolean(badge));
+    if (badge) {
+      marked.push(category.name);
+      assert.equal(badge.textContent, '活动');
+      assert.match(card.getAttribute('aria-label'), /参与双11活动/);
+      badge.click();
+      assert.equal(f.node('epSelection').textContent, category.name, 'corner badge remains part of the category click target');
+    } else {
+      assert.doesNotMatch(card.getAttribute('aria-label'), /参与双11活动/);
+    }
+  }
+  assert.deepEqual(marked.sort(), expected);
+  assert.equal(f.node('epCategoryGrid').querySelectorAll('.ep-category-activity').length, 7);
+  assert.ok(source('home.html').indexOf('src="expert-event-categories.js"') < source('home.html').indexOf('src="expert-picker.js"'));
 });
 
 test('brand and style search filter actual options and recover after no-result queries', () => {

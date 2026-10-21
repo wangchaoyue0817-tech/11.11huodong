@@ -1,8 +1,9 @@
-import {START,END,PRIZES,active,balances,draw,leaderboard,isEligibleCategory} from './expert-event-model.js';
+import {START,END,PRIZES,ACTIVITY_CATEGORIES,active,balances,draw,leaderboard,isEligibleCategory} from './expert-event-model.js';
 import {loadEvent,saveEvent,eventNow} from './expert-event-session.js';
 import {machineMarkup,mountMachine,prizeArt} from './capsule-machine.js';
 import {voucherMarkup} from './reward-ui.js';
 import {celebrateGacha,outcomeTier} from './gacha-celebration.js';
+import {comfortMarkup,mountComfort} from './gacha-comfort.js';
 
 export const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const eventCount=state=>state.orders.filter(o=>o.uid===state.uid&&o.at>=START&&o.at<END&&o.eligible!==false&&isEligibleCategory(o.category)).length;
@@ -52,18 +53,19 @@ export function showEventDialog(title,body,{className='',onClose,celebration=nul
  dialog.setAttribute('aria-label',title);dialog.setAttribute('tabindex','-1');document.body.append(dialog);currentDialog=dialog;
  dialog.querySelector('[data-ev-close]').onclick=()=>dialog.close('dismiss');
  dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close('dismiss');}});
- dialog.addEventListener('close',()=>{const reason=dialog.returnValue||'dismiss';stopCelebration?.();dialog.remove();if(currentDialog===dialog)currentDialog=null;if(reason==='dismiss'&&previousFocus?.isConnected)previousFocus.focus?.({preventScroll:true});onClose?.({reason});},{once:true});
+ const stopComfort=mountComfort(dialog);
+ dialog.addEventListener('close',()=>{const reason=dialog.returnValue||'dismiss';stopCelebration?.();stopComfort();dialog.remove();if(currentDialog===dialog)currentDialog=null;if(reason==='dismiss'&&previousFocus?.isConnected)previousFocus.focus?.({preventScroll:true});onClose?.({reason});},{once:true});
  dialog.showModal();dialog.focus?.({preventScroll:true});focusProgress(dialog);if(celebration)stopCelebration=celebrateGacha(dialog,celebration);return dialog;
 }
 export function openRules({onReturn}={}){
  return showEventDialog('专鉴有礼 · 活动规则',`<div class="ev-rules">
  <p>活动时间：2026 年 10 月 27 日 00:00 至 11 月 11 日 00:00（北京时间）。</p>
- <h3>六大品类，专鉴有礼</h3><p>美妆、包袋、鞋靴、服饰、手表、数码 3C 参与。提交成功即累计 1 单，每 2 单得 1 张普通券；每 10 单得 1 张高级券，该节点不再发普通券。跨天累计，无次数上限。其他品类仍可免费专鉴，不计入本活动。</p>
+ <h3>七大品类，专鉴有礼</h3><p>${ACTIVITY_CATEGORIES.map(category=>category.name).join('、')}参与。提交成功即累计 1 单，每 2 单得 1 张普通券；每 10 单得 1 张高级券，该节点不再发普通券。跨天累计，无次数上限。其他品类仍可免费专鉴，不计入本活动。</p>
  <h3>每天一次免费机会</h3><p>每日首次进入活动自动领取 1 张普通券，当天有效，未使用不顺延。鉴定获得的券有效至活动结束。优先使用即将到期的券。</p>
  <h3>普通与高级奖池</h3><p>普通池：实物 8%、鉴定券 72%、再接再厉 20%。高级池：实物 5%、鉴定券 75%、再接再厉 20%。同池可抽实物等概率；库存为零后不再抽出该奖品。</p>
  <p>本活动每人最多获得 1 份实物，普通与高级池合计计算，与卡牌活动独立。已中实物或奖池实物全部领完后，实物概率转为鉴定券。鉴定券有效至 2026 年 12 月 12 日 23:59:59。</p>
  <h3>单抽与五连抽</h3><p>选择一种券，每次使用 1 张或同种 5 张。不同券种、不同活动的券不能混用。结果自动保存，统一在「我的奖品」查看。</p>
- <h3>鉴真王者与避雷王者</h3><p>按活动期间六大品类的专家最终鉴真、鉴假订单数分别排名；同数按先达到者优先。活动结束后才出结果的订单不计入。两榜可同时获奖。</p><p>鉴真榜前三名：每人称号与 200 元现金红包。避雷榜前三名：每人称号与终身免费专鉴权益，不限品类与次数。活动结束时统一结算。</p>
+ <h3>鉴真王者与避雷王者</h3><p>按活动期间七大品类的专家最终鉴真、鉴假订单数分别排名；同数按先达到者优先。活动结束后才出结果的订单不计入。两榜可同时获奖。</p><p>鉴真榜前三名：每人称号与 200 元现金红包。避雷榜前三名：每人称号与终身免费专鉴权益，不限品类与次数。活动结束时统一结算。</p>
  <p class="ev-demo-note">当前为交互演示。鉴定、奖励、榜单及库存为本机模拟，商品图为奖品示意。</p></div>`,{onClose:({reason})=>{if(reason==='dismiss')onReturn?.();}});
 }
 export function openProgress({reward=null}={}){
@@ -85,9 +87,9 @@ export function openDraw({pool='ordinary',count=1,onChange,onReturn,random}={}){
  const s=loadEvent(),now=eventNow();
  const response=draw(s,{pool,count,requestId:crypto.randomUUID()},now,random);
  if(response.error){showEventDialog('暂时无法扭蛋',`<div class="ev-empty">${rewardArt(pool)}<h2>${escapeHtml(response.error)}</h2><button class="ev-primary" data-expert>去专鉴 ${icon()}</button></div>`,{onClose:({reason})=>{if(reason==='dismiss')onReturn?.();}}).querySelector('[data-expert]').onclick=()=>{closeEventDialog();goExpert();};return null;}
- saveEvent(response.state);onChange?.(response);let controller=null,done=false,stopCelebration=null;
- const d=showEventDialog(pool==='advanced'?'高级扭蛋':'普通扭蛋',`<div class="ev-draw-stage">${machineMarkup({pool,compact:true})}<p>正在开启 ${count} 枚扭蛋</p><button class="ev-text-button" data-skip>跳过动画 ${icon()}</button></div>`,{className:'ev-draw-dialog',onClose:({reason})=>{controller?.destroy();stopCelebration?.();if(reason==='dismiss')onReturn?.();}});
- const reveal=()=>{if(done||!d.open)return;done=true;controller?.destroy();d.querySelector('.ev-dialog-body').innerHTML=resultMarkup(response.batch,{canReturn:Boolean(onReturn)});d.classList.add('ev-result-dialog');d.querySelector('.ev-dialog-head>span').textContent='扭蛋结果';stopCelebration=celebrateGacha(d,outcomeTier(response.batch));
+ saveEvent(response.state);onChange?.(response);let controller=null,done=false,stopCelebration=null,stopComfort=null;
+ const d=showEventDialog(pool==='advanced'?'高级扭蛋':'普通扭蛋',`<div class="ev-draw-stage">${machineMarkup({pool,compact:true})}<p>正在开启 ${count} 枚扭蛋</p><button class="ev-text-button" data-skip>跳过动画 ${icon()}</button></div>`,{className:'ev-draw-dialog',onClose:({reason})=>{controller?.destroy();stopCelebration?.();stopComfort?.();if(reason==='dismiss')onReturn?.();}});
+ const reveal=()=>{if(done||!d.open)return;done=true;controller?.destroy();d.querySelector('.ev-dialog-body').innerHTML=resultMarkup(response.batch,{canReturn:Boolean(onReturn)});d.classList.add('ev-result-dialog');d.querySelector('.ev-dialog-head>span').textContent='扭蛋结果';stopCelebration=celebrateGacha(d,outcomeTier(response.batch));stopComfort=mountComfort(d);
  d.querySelector('[data-result-prizes]').onclick=()=>{d.close('navigate');window.jianxNavigate('prizes',{event:'expert',pool:response.batch.pool});};
  d.querySelector('[data-result-expert]').onclick=()=>{d.close('navigate');goExpert();};
  d.querySelector('[data-result-again]').onclick=()=>{d.close('repeat');openDraw({pool,count,onChange,onReturn});};
@@ -102,7 +104,8 @@ export function resultMarkup(batch,{canReturn=false}={}){
  const vouchers=batch.rewards.filter(r=>r.type==='voucher');
  const other=batch.rewards.filter(r=>r.type!=='voucher');
  return `<section class="ev-result" data-result-tier="${tier}"><div class="ev-result-heading"><span class="ev-eyebrow">${batch.pool==='advanced'?'高级奖池':'普通奖池'} · ${many?'五连抽':'单次抽取'}</span><h2>${tier==='physical'?'恭喜，抽中实物好礼':tier==='voucher'?'获得专家线上鉴别券':'再接再厉'}</h2></div>
- ${other.length?`<div class="ev-result-grid ${many?'is-five':''}">${other.map(r=>`<article class="ev-result-card ${r.type==='physical'?'is-physical':'is-empty'}">${prizeArt(r.type==='physical'?r.prizeId:'none')}<strong>${escapeHtml(r.type==='physical'?PRIZES.find(p=>p.id===r.prizeId)?.name:'再接再厉')}</strong></article>`).join('')}</div>`:''}
+ ${!won?comfortMarkup(batch.rewards.length):''}
+ ${won&&other.length?`<div class="ev-result-grid ${many?'is-five':''}">${other.map(r=>`<article class="ev-result-card ${r.type==='physical'?'is-physical':'is-empty'}">${prizeArt(r.type==='physical'?r.prizeId:'none')}<strong>${escapeHtml(r.type==='physical'?PRIZES.find(p=>p.id===r.prizeId)?.name:'再接再厉')}</strong></article>`).join('')}</div>`:''}
  ${vouchers.length?voucherMarkup(vouchers.length,vouchers[0].expiresAt,{title:'专家线上鉴别券',category:'双11扭蛋 · 专家服务',displayExpiresAt:vouchers[0].expiresAt-1,action:'result-voucher',readOnly:true}):''}
  ${won?'<p class="ev-result-saved">已存入「我的奖品」</p>':''}
  <div class="ev-result-actions"><button class="${won?'ev-primary':'ev-text-button'}" data-result-prizes>查看我的奖品 ${icon()}</button><button class="${won?'ev-text-button':'ev-primary'}" data-result-expert>去专鉴 ${icon()}</button><button class="ev-secondary" data-result-again>再扭${many?'五次':'一次'}</button></div>${canReturn?'<button class="ev-text-button ev-full ev-result-back" data-result-back>返回活动</button>':''}</section>`;

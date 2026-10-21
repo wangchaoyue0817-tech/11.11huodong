@@ -132,6 +132,58 @@
 .ev-result-actions .ev-text-button{font-size:13px}
 .ev-result-actions .ev-secondary{min-height:42px;font-size:13px}
 .ev-result-back{margin-top:6px}
+/* A pearlescent capsule offers a little hug, without disguising a missed draw. */
+.gc-comfort{text-align:center;margin:-8px auto 0;max-width:300px}
+.gc-caption{font-size:13px;line-height:1.6;color:#dbcaef;margin:0;min-height:21px}
+.gc-character{display:block;width:100%;padding:0 0 8px;margin:0;border:0;border-radius:22px;background:transparent;color:#e2d0ff;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.gc-scene{display:block;position:relative;width:234px;height:190px;margin:0 auto;isolation:isolate}
+.gc-scene i{position:absolute;display:block;font-style:normal;pointer-events:none}
+.gc-halo{inset:7px -10px -4px;border-radius:50%;background:radial-gradient(ellipse,#bc91ff2c,transparent 67%)}
+.gc-shadow{width:124px;height:12px;bottom:13px;left:55px;border-radius:50%;background:#b59bfa28;filter:blur(6px);animation:gc-shadow 2.6s ease-in-out both}
+.gc-capsule{display:block;position:absolute;left:47px;top:35px;width:140px;height:128px;transform-origin:50% 90%;animation:gc-arrive 2.6s cubic-bezier(.3,.1,.3,1) both}
+.gc-lid{z-index:1;left:4px;top:0;width:132px;height:76px;border-radius:70px 70px 23px 23px / 69px 69px 14px 14px;border:1px solid #f9ecffba;background:radial-gradient(ellipse at 33% 16%,#fff9ff 0%,#e5d6ffb8 23%,#aa87e673 62%,#ddd0ff8c 100%);box-shadow:inset 0 3px 5px #fff7ff83,inset -8px -5px 14px #9e70f336,0 4px 12px #25145818;transform:translate(-7px,-23px) rotate(-13deg);transform-origin:8% 90%;animation:gc-peek 2.6s ease-in-out both}
+.gc-lid:before{content:"";position:absolute;width:48px;height:13px;top:15px;left:22px;border-radius:50%;background:#fff8ffab;transform:rotate(-25deg);filter:blur(2px)}
+.gc-lid:after{content:"";position:absolute;inset:auto 5px 2px;height:14px;border-radius:50%;border-bottom:2px solid #f9eaff9e}
+.gc-rim{z-index:2;left:0;top:57px;width:140px;height:29px;border-radius:50%;background:linear-gradient(175deg,#7460b2,#b29bde);border:4px solid #f2e6ff;box-shadow:inset 0 4px 6px #53358077,0 -1px 2px #fff7ff}
+.gc-bowl{z-index:3;left:0;top:70px;width:140px;height:65px;border-radius:8px 8px 76px 76px / 8px 8px 64px 64px;background:radial-gradient(ellipse at 27% 5%,#f4e4ff,#ceb1fa 41%,#9b79dc 78%,#c4a6ef);border:1px solid #efdcffbe;border-top:2px solid #fff4ff;box-shadow:inset 4px -4px 8px #805ac938,inset -5px -3px 6px #f1d8ff6b,0 7px 14px #27135122}
+.gc-bowl:before{content:"";position:absolute;left:13px;top:8px;width:7px;height:22px;background:#fcf3ff6e;border-radius:50%;transform:rotate(-20deg);filter:blur(1px)}
+.gc-face{position:absolute;z-index:4;width:64px;height:33px;left:38px;top:84px;animation:gc-look 2.6s ease-in-out both}
+.gc-eye{width:6px;height:9px;border-radius:50%;top:0;background:#594182;box-shadow:inset 1px 1px #8e6fad}
+.gc-eye-left{left:14px}.gc-eye-right{right:14px}
+.gc-cheek{width:14px;height:6px;border-radius:50%;background:#e5a4cf96;top:12px;filter:blur(.5px)}
+.gc-cheek-left{left:1px}.gc-cheek-right{right:1px}
+.gc-mouth{left:27px;top:14px;width:11px;height:6px;border-bottom:2px solid #76528d;border-radius:0 0 50% 50%;transform:rotate(-8deg)}
+.gc-arm{z-index:5;top:82px;width:28px;height:17px;border-radius:60%;background:linear-gradient(160deg,#f4ddff,#bb93ec);border:1px solid #ebd3ffb8;box-shadow:0 2px 5px #69448b33;transition:transform .3s ease}
+.gc-arm-left{left:-14px;transform:rotate(-38deg);transform-origin:90% 50%}.gc-arm-right{right:-14px;transform:rotate(38deg);transform-origin:10% 50%}
+.gc-heart{width:20px;height:20px;background:linear-gradient(135deg,#ffe5ec,#f2b6d6 65%,#ca8cbf);transform:rotate(-45deg);border-radius:3px;filter:drop-shadow(0 3px 5px #b577bf3d)}
+.gc-heart:before,.gc-heart:after{content:"";position:absolute;width:20px;height:20px;border-radius:50%;background:inherit}
+.gc-heart:before{top:-10px;left:0}.gc-heart:after{left:10px;top:0}
+.gc-heart-main{z-index:6;left:60px;top:104px;opacity:0;scale:.35;transition:opacity .3s,scale .4s cubic-bezier(.2,.8,.2,1.3)}
+.gc-heart-float{z-index:7;opacity:0;scale:.4}
+.gc-heart-one{left:42px;top:55px}.gc-heart-two{right:35px;top:70px}.gc-heart-three{left:115px;top:29px}
+.gc-spark{width:8px;height:8px;background:#e8d2ffb8;clip-path:polygon(50% 0,63% 37%,100% 50%,63% 63%,50% 100%,37% 63%,0 50%,37% 37%)}
+.gc-spark-one{left:22px;top:94px}.gc-spark-two{right:25px;top:38px;width:11px;height:11px}
+.gc-touch-hint{display:inline-flex;align-items:center;gap:7px;min-height:29px;padding:3px 12px;border:1px solid #d6b6ff43;border-radius:20px;background:#bb94f212;color:#e1c6ff;font-size:12px;box-shadow:inset 0 1px #e8d3ff12}
+.gc-touch-hint>span{font-size:18px;color:#efc7e6;line-height:1}
+.gc-batch-note{color:#bfaedb;font-size:11px;margin:1px 0 0}
+.gc-comfort.is-hugged .gc-lid{animation:none;transform:translate(-7px,-23px) rotate(-13deg)}
+.gc-comfort.is-hugged .gc-face{animation:none}
+.gc-comfort.is-hugged .gc-capsule{animation:none}
+.gc-comfort.is-hugged .gc-eye{height:6px;border:0;border-top:2px solid #624781;border-radius:50%;background:transparent;box-shadow:none}
+.gc-comfort.is-hugged .gc-mouth{width:13px;left:26px;transform:none;border-bottom-width:2px}
+.gc-comfort.is-hugged .gc-arm-left{transform:translate(43px,25px) rotate(28deg)}
+.gc-comfort.is-hugged .gc-arm-right{transform:translate(-43px,25px) rotate(-28deg)}
+.gc-comfort.is-hugged .gc-heart-main{opacity:1;scale:1}
+.gc-comfort.is-hugging .gc-capsule{animation:gc-hug 1.25s cubic-bezier(.3,.1,.3,1) both}
+.gc-comfort.is-hugging .gc-heart-float{animation:gc-float-heart 1.2s ease-out both}
+.gc-comfort.is-hugging .gc-heart-two{animation-delay:.12s}.gc-comfort.is-hugging .gc-heart-three{animation-delay:.24s}
+@keyframes gc-arrive{0%{opacity:0;transform:translateY(-10px) scale(.9)}16%{opacity:1;transform:translateY(4px) scale(1.03,.96)}29%{transform:rotate(-9deg)}39%{transform:rotate(8deg)}49%{transform:rotate(-4deg)}59%,100%{transform:none}}
+@keyframes gc-peek{0%,46%{transform:none}64%{transform:translate(-4px,-29px) rotate(-18deg)}78%{transform:translate(-7px,-20px) rotate(-11deg)}100%{transform:translate(-7px,-23px) rotate(-13deg)}}
+@keyframes gc-look{0%,57%{transform:none}71%,84%{transform:translateY(5px) rotate(7deg)}100%{transform:none}}
+@keyframes gc-shadow{0%{scale:.7;opacity:.5}29%,49%{scale:.9}59%,100%{scale:1;opacity:1}}
+@keyframes gc-hug{0%,100%{transform:none}30%{transform:translateY(-8px) scale(1.06)}52%{transform:translateY(2px) scale(1.02,.98)}74%{transform:translateY(-2px) rotate(-3deg)}}
+@keyframes gc-float-heart{0%{opacity:0;translate:0 26px;scale:.25}25%{opacity:.9;scale:.55}100%{opacity:0;translate:0 -24px;scale:.3}}
+@media(prefers-reduced-motion:reduce){.gc-comfort *,.gc-comfort *:before,.gc-comfort *:after{animation:none!important;transition:none!important}}
 .ev-dialog .reward-coupon{--ticket-cutout:#2c235e;margin:0}
 .ev-empty{text-align:center;padding:12px 0}
 .ev-empty>.ev-reward-art{width:160px;height:110px;object-fit:contain;margin:auto}

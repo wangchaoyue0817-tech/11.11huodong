@@ -68,6 +68,13 @@ for(const [count,ordinary,advanced,reward] of [
   assert(scene.state.orders.every(order=>order.eligible));
 });
 
+test('demo progress cycles through the same seven activity categories without legacy merged labels',()=>{
+  const scene=buildDemoScene('progress-14');
+  const expected=['美妆','包袋','鞋靴','服饰','手表','数码家电','3C无损'];
+  assert.deepEqual(scene.state.orders.map(order=>order.category),[...expected,...expected]);
+  assert(scene.state.orders.every(order=>order.eligible));
+});
+
 test('draw scenarios supply valid same-pool tickets without changing global randomness',()=>{
   const original=Math.random;
   for(const pool of ['ordinary','advanced'])for(const count of [1,5]) {

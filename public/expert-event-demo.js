@@ -1,5 +1,5 @@
 import {
-  START,END,DAY,PRIZES,fresh,balances,claimDaily,submitOrder,completeOrder,draw
+  START,END,DAY,PRIZES,ACTIVITY_CATEGORIES,fresh,balances,claimDaily,submitOrder,completeOrder,draw
 } from './expert-event-model.js';
 import {DEFAULT_TIME,saveEvent,setEventClock} from './expert-event-session.js';
 
@@ -57,7 +57,7 @@ export const DEMO_DRAW_OPTIONS = {
 
 const sceneIds=new Set(DEMO_SCENE_GROUPS.flatMap(group=>group.scenes.map(scene=>scene.id)));
 const product={category:'美妆',product:'圣罗兰 · 气垫粉底'};
-const categoryOptions=['美妆','包袋','鞋靴','服饰','手表','数码3C'];
+const categoryOptions=ACTIVITY_CATEGORIES.map(category=>category.name);
 const drawOutcomes=new Set(DEMO_DRAW_OPTIONS.outcomes.map(option=>option.value));
 
 function usedIntroduction(now=DEFAULT_TIME) {

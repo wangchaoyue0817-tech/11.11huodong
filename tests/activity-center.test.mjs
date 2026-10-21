@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {earnedPrizes,eligibleOrderCount,recordMarkup,legacyFixture,readLegacy,legacyInventory,ticketRows,prizeMarkup,escapeHTML,resolveActivityNavigation} from '../public/activity-center.js';
+import {earnedPrizes,eligibleOrderCount,recordMarkup,legacyFixture,readLegacy,legacyInventory,ticketRows,prizeMarkup,escapeHTML,resolveActivityNavigation,eventRules} from '../public/activity-center.js';
 import {START,END,VOUCHER_END,fresh,claimDaily,submitOrder,draw,ticketInventory} from '../public/expert-event-model.js';
 import {fresh as oldFresh,START as OLD_START,END as OLD_END,welcome as oldWelcome,draw as oldDraw} from '../public/lottery-model.js';
 
@@ -34,6 +34,16 @@ test('center progress includes only own eligible submissions during the activity
     {uid:'me',category:'包袋',at:now,eligible:false},
   ];
   assert.equal(eligibleOrderCount(state),2);
+});
+
+test('center progress and visible rules use all seven shared activity categories',() => {
+  const categories=['美妆','包袋','鞋靴','服饰','手表','数码家电','3C无损'];
+  const state=fresh('me');
+  state.orders=[...categories,'美妆无损','卡牌','珠宝玉石'].map(category=>({uid:'me',category,at:now,eligible:true}));
+  assert.equal(eligibleOrderCount(state),7);
+  const rules=eventRules(state);
+  assert.ok(rules.includes(`${categories.join('、')} 专家鉴定提交成功后计入活动`));
+  assert.doesNotMatch(rules,/数码3C|美妆无损/);
 });
 
 test('legacy session is displayed without writing, resetting, or upgrading original storage',() => {
@@ -122,7 +132,6 @@ test('center restores the accessible original top tabs and uses an inline shared
   assert.match(source,/mountMachine\(\$\('ac-content'\)\.querySelector\('\.gm-machine'\)\)/);
   assert.doesNotMatch(source,/ui\.openDraw\(/);
   assert.match(source,/currentEvent === 'expert' && !drawing/);
-  assert.match(source,/美妆、包袋、鞋靴、服饰、手表、数码3C/);
   assert.match(html,/REWARDS CENTER/);
   assert.match(html,/class="center-tab-switcher" role="tablist"/);
   assert.match(html,/id="tab-lottery" role="tab"[^>]*aria-controls="ac-content"[^>]*>抽奖券/);

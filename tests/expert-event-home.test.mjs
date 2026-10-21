@@ -183,7 +183,7 @@ test('eligible upload opens progress after submission while card upload never op
   }
 });
 
-for(const category of ['美妆','包袋','鞋靴','服饰','手表','数码 3C'])test(`${category} submissions one through eleven each open progress with rewards only at the correct milestones`,()=>{
+for(const category of ['美妆','包袋','鞋靴','服饰','手表','数码家电','3C无损'])test(`${category} submissions one through eleven each open progress with rewards only at the correct milestones`,()=>{
   const f=fixture();
   for(let count=1;count<=11;count++) {
     f.window.onExpertSelected({category,name:`第 ${count} 件演示商品`});f.flush();
