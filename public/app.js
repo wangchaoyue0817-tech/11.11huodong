@@ -134,7 +134,7 @@ function bindSwipe(el,onSwipe){let start=null,moved=false,suppressUntil=0;
  el.addEventListener('click',e=>{if(Date.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
  el.addEventListener('mouseenter',()=>{if(matchMedia('(hover:hover)').matches)state.pointer=true;});el.addEventListener('mouseleave',()=>{state.pointer=false;});
 }
-const questions=['林** 抽中了 YSL气垫','许** 抽中了 专家鉴定券','苏** 抽中了 COACH腰带','周** 抽中了 香水小样','陈** 抽中了 雷蛇耳机','宋** 抽中了 专家鉴定券','叶** 抽中了 护肤品小样','江** 抽中了 COACH钱包','程** 抽中了 美妆小样','杨** 抽中了 专家鉴定券','吴** 抽中了 香水小样','王** 抽中了 专家鉴定券'];
+const questions=['林** 抽中了 YSL气垫','苏** 抽中了 COACH腰带','周** 抽中了 香水小样','陈** 抽中了 雷蛇耳机','叶** 抽中了 护肤品小样','江** 抽中了 COACH钱包','程** 抽中了 美妆小样','吴** 抽中了 香水小样'];
 const tickerRows=[];
 function createTicker(){
  $('ticker').innerHTML=[0,1,2].map(row=>{const items=questions.filter((_,i)=>i%3===row);const html=items.map((t,i)=>`<button class="suggestion-item" type="button" data-winner="${escaped(t)}"><i aria-hidden="true" class="suggestion-dot ${(i+row)%2?'a':'b'}"></i><span class="suggestion-text">${t}<span class="eh-winner-arrow">›</span></span></button>`).join('');return `<div class="suggestion-row"><div class="suggestion-track"><div class="ticker-set" style="display:flex;gap:7px">${html}</div><div class="ticker-set" aria-hidden="true" style="display:flex;gap:7px">${html}</div></div></div>`;}).join('');

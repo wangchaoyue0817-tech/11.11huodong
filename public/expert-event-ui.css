@@ -111,7 +111,9 @@
 .ev-rank-list{display:grid;gap:7px}
 .ev-rank-row{display:flex;align-items:center;gap:10px;min-height:60px;padding:9px 12px;border:1px solid #c3b5f21c;border-radius:14px;background:var(--rank-surface);box-shadow:inset 0 1px #d1c4f508;color:var(--rank-text)}
 .ev-rank-number{width:22px;font-size:17px;font-weight:550;color:var(--rank-muted);flex-shrink:0;font-variant-numeric:tabular-nums}
-.ev-rank-username{flex:1;min-width:0;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-rank-user{display:flex;flex-direction:column;justify-content:center;gap:3px;flex:1;min-width:0}
+.ev-rank-username{font-size:14px;font-weight:500;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-rank-phone{font-size:12px;font-weight:400;line-height:1.4;color:var(--rank-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ev-rank-row>strong{flex-shrink:0;font-size:21px;font-weight:600;letter-spacing:-.5px;font-variant-numeric:tabular-nums;color:var(--rank-accent);white-space:nowrap}
 .ev-rank-row small{font-size:11px;font-weight:400;letter-spacing:0;color:var(--rank-muted)}
 .ev-rank-row.is-me{background:#302c50;border-color:#ae99e466;box-shadow:inset 2px 0 #a18ade88}

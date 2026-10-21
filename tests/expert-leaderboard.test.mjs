@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDocument} from './dom-fixture.mjs';
-import {START,END,fresh} from '../public/expert-event-model.js';
-import {leaderboardMarkup} from '../public/expert-event-ui.js';
+import {START,END,fresh,leaderboard} from '../public/expert-event-model.js';
+import {leaderboardMarkup,maskedRankPhone,rankingState} from '../public/expert-event-ui.js';
+import {buildDemoScene} from '../public/expert-event-demo.js';
 
 const T=START+3600000;
 function rankingFixture(users=[],uid='me') {
   const state={...fresh(uid),demoRanking:true,users:[]};
   for(const [index,user] of users.entries()) {
-    state.users.push({uid:user.uid,username:user.name||user.uid});
+    state.users.push({uid:user.uid,username:user.name||user.uid,...('phone' in user?{phone:user.phone}:{})});
     for(const kind of ['true','false']) {
       for(let i=0;i<(user[kind]||0);i++)state.orders.push({
         id:`${user.uid}-${kind}-${i}`,uid:user.uid,category:'美妆',eligible:true,
@@ -27,6 +28,103 @@ const baseUsers=[
   {uid:'third',name:'周小鱼',true:3,false:5},
   {uid:'fourth',name:'陈**8',true:2,false:2}
 ];
+
+test('phone masking accepts mainland numbers and supported country-code formatting but exposes only the prefix and suffix',()=>{
+  for(const value of [
+    '13812345678',13812345678,'138 1234 5678','138-1234-5678',
+    '+8613812345678','+86 138 1234 5678','+86-138-1234-5678',
+    '008613812345678','0086 138 1234 5678','0086-138-1234-5678',
+    '  +86 138-1234-5678  ','138****5678','+86 138****5678'
+  ])assert.equal(maskedRankPhone(value),'138****5678',`unsupported phone representation: ${String(value)}`);
+  assert.equal(maskedRankPhone('19987654321'),'199****4321');
+  assert.equal(maskedRankPhone(maskedRankPhone('13812345678')),'138****5678','masking is idempotent');
+});
+
+test('missing or invalid phone values produce a safe placeholder without echoing raw input',()=>{
+  for(const value of [
+    undefined,null,'','   ',0,123,1381234567,138123456789,NaN,Infinity,true,false,{},[],[13812345678],
+    '12812345678','23812345678','1381234567','138123456789','138****56789','138****abcd',
+    '+1 13812345678','电话13812345678','13812345678转1','<img src=x onerror=alert(1)>13812345678',
+    {toString(){return '13812345678';}}
+  ])assert.equal(maskedRankPhone(value),'手机号未提供');
+});
+
+test('ordinary rows in both boards nest masked names and phone numbers while keeping the existing rank and count',()=>{
+  const users=[
+    {uid:'first',name:'林小清',phone:'13811110001',true:8,false:9},
+    {uid:'second',name:'许小鱼',phone:'13811110002',true:7,false:8},
+    {uid:'third',name:'周小星',phone:'13811110003',true:6,false:7},
+    {uid:'me',name:'自己的完整名字',phone:13812345678,true:3,false:1},
+    {uid:'fifth',name:'陈小王',phone:'+86 139-8765-4321',true:1,false:3}
+  ];
+  const state=rankingFixture(users),before=structuredClone(state);
+  for(const kind of ['true','false']){
+    const document=view(state,kind),expected=leaderboard(state,kind).slice(3,100);
+    const rows=document.querySelectorAll('.ev-rank-row');
+    assert.equal(rows.length,2);
+    for(const [index,row]of rows.entries()){
+      const user=users.find(user=>user.uid===expected[index].uid),identity=row.querySelector('.ev-rank-user');
+      assert(identity,'ordinary row groups the display name and phone in one identity column');
+      assert.equal(identity.querySelector('.ev-rank-username').parentElement,identity);
+      assert.equal(identity.querySelector('.ev-rank-phone').parentElement,identity);
+      assert.equal(identity.querySelector('.ev-rank-phone').textContent,user.uid==='me'?'138****5678':'139****4321');
+      assert.equal(row.dataset.rank,String(expected[index].rank));
+      assert.equal(row.querySelector('.ev-rank-number').textContent,String(expected[index].rank).padStart(2,'0'));
+      assert.match(row.querySelector('strong').textContent,new RegExp(`^${expected[index].count}\\s*单$`));
+      assert.equal(row.classList.contains('is-me'),user.uid==='me');
+      if(user.uid==='me')assert.equal(identity.querySelector('.ev-rank-username').textContent,'我');
+    }
+    assert.equal(document.querySelectorAll('.ev-rank-phone').length,rows.length);
+    assert.equal(document.querySelector('.ev-podium .ev-rank-phone'),null);
+    assert.equal(document.querySelector('.ev-my-rank .ev-rank-phone'),null);
+    assert.doesNotMatch(document.querySelector('.ev-podium').textContent,/1[3-9]\d\*{4}\d{4}/);
+    assert.doesNotMatch(document.querySelector('.ev-my-rank').textContent,/1[3-9]\d\*{4}\d{4}/);
+    for(const user of users)assert.equal(document.querySelector('main').textContent.includes(String(user.phone)),false);
+  }
+  assert.deepEqual(state,before);
+});
+
+test('ordinary rows with old or malformed phone data show placeholders instead of invented numbers or raw input',()=>{
+  const state=rankingFixture([
+    ...baseUsers.slice(0,3),
+    {uid:'missing',name:'无手机号',true:2,false:1},
+    {uid:'malformed',name:'异常手机号',phone:'<script>13812345678</script>',true:1,false:2}
+  ]);
+  for(const kind of ['true','false']){
+    const document=view(state,kind),rows=document.querySelectorAll('.ev-rank-row');
+    assert.equal(rows.length,2);
+    assert(rows.every(row=>row.querySelector('.ev-rank-phone').textContent==='手机号未提供'));
+    assert.doesNotMatch(document.querySelector('main').textContent,/13812345678|138\*{4}5678/);
+    assert.equal(document.querySelectorAll('script').length,0);
+  }
+});
+
+test('default and explicit ranking demos supply already masked phone data to ordinary rows',()=>{
+  const states=[rankingState(fresh()),...['rank-unranked','rank-normal','rank-top3','rank-dual'].map(id=>buildDemoScene(id).state)];
+  for(const state of states)for(const kind of ['true','false']){
+    const document=view(state,kind),rows=document.querySelectorAll('.ev-rank-row');
+    assert(rows.length>0,'the demo includes ordinary rows below the podium');
+    for(const row of rows)assert.match(row.querySelector('.ev-rank-phone').textContent,/^1[3-9]\d\*{4}\d{4}$/);
+    assert.equal(document.querySelector('.ev-podium .ev-rank-phone'),null);
+    assert.equal(document.querySelector('.ev-my-rank .ev-rank-phone'),null);
+  }
+});
+
+test('default ranking fixtures preserve supplied identity records and never invent a phone for old users',()=>{
+  const state=rankingFixture([
+    {uid:'me',name:'本人的保存资料',true:5,false:5},
+    {uid:'rank-4',name:'已有演示账号资料',phone:'+86 13912345678',true:1,false:1}
+  ]);
+  delete state.demoRanking;
+  const before=structuredClone(state),ranked=rankingState(state);
+  for(const user of state.users)assert.deepEqual(ranked.users.find(item=>item.uid===user.uid),user);
+  assert.deepEqual(state,before);
+  for(const kind of ['true','false']){
+    const document=view(ranked,kind),mine=document.querySelector('.ev-rank-row.is-me');
+    assert(mine,'the saved account remains an ordinary-row participant');
+    assert.equal(mine.querySelector('.ev-rank-phone').textContent,'手机号未提供');
+  }
+});
 
 test('compact leaderboard removes retired campaign slogans while retaining clear rules and expert actions',()=>{
   const document=view(rankingFixture(baseUsers)),text=document.querySelector('main').textContent;

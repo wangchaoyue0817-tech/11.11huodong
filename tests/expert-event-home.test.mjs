@@ -183,6 +183,31 @@ test('eligible upload opens progress after submission while card upload never op
   }
 });
 
+for(const category of ['美妆','包袋','鞋靴','服饰','手表','数码 3C'])test(`${category} submissions one through eleven each open progress with rewards only at the correct milestones`,()=>{
+  const f=fixture();
+  for(let count=1;count<=11;count++) {
+    f.window.onExpertSelected({category,name:`第 ${count} 件演示商品`});f.flush();
+    assert(f.document.querySelector('.eh-order-benefit'));
+    f.document.querySelector('[data-submit]').click();f.flush();
+    const reward=count%2===0?{pool:count%10===0?'advanced':'ordinary',amount:1}:null;
+    assert.equal(f.progress.length,count,'every eligible submission opens exactly one progress popup');
+    assert.deepEqual(f.progress.at(-1),{reward});
+    assert.equal(eventCount(f.state),count);
+    assert.equal(f.state.orders.length,count);
+    assert.equal(f.state.orders.at(-1).eligible,true);
+    assert.equal(f.state.orders.at(-1).ordinal,count);
+    assert.equal(f.state.tickets.length,Math.floor(count/2));
+    assert.deepEqual(model.balances(f.state,T),{
+      ordinary:Math.floor(count/2)-Math.floor(count/10),advanced:Math.floor(count/10),daily:0
+    },'the tenth order replaces the ordinary ticket with one advanced ticket');
+    assert.equal(f.document.querySelector('.eh-flow-nav strong').textContent,'鉴别报告');
+    const before=f.state;
+    f.setState(f.state);f.flush();
+    assert.equal(f.progress.length,count,'shared state refreshes do not reopen the submission popup');
+    assert.deepEqual(f.state,before,'report rendering does not award an extra ticket');
+  }
+});
+
 test('pending and all three completed report states omit inline activity progress and the continue-appraisal action',()=>{
   for(const [result,label]of [[null,'专家正在鉴别中'],['true','专家结论：鉴真'],['false','专家结论：鉴假'],['unknown','专家结论：暂无法判断']]){
     const f=fixture();

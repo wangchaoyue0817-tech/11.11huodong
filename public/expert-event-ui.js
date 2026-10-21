@@ -73,9 +73,11 @@ export function openProgress({reward=null}={}){
  ${reward?`<div class="ev-reward-emblem">${rewardArt(premium?'advanced':'ordinary')}</div>`:''}
  <h2>${reward?`${premium?'高级':'普通'}抽奖券 <em>+1</em>`:'提交成功'}</h2>
  </div>${progressMarkup(s)}
- <button class="ev-primary" data-center>去抽奖中心 ${icon()}</button>
+ <button class="ev-primary" data-progress-expert>去专鉴赢抽奖券 ${icon()}</button>
+ <button class="ev-text-button ev-full" data-center>去抽奖中心 ${icon()}</button>
  <button class="ev-rank-teaser" data-rank><span class="ev-rank-small">${icon('crown')}</span><span><strong>王者榜</strong><small>前三名有礼</small></span>${icon()}</button>`,{className:`ev-progress-dialog ${premium?'ev-premium-dialog':''}`,celebration:reward?(premium?'advanced':'ordinary'):null});
  d.querySelector('[data-center]').onclick=()=>{d.close('navigate');window.jianxNavigate('lottery',{event:'expert',pool:premium?'advanced':'ordinary'});};
+ d.querySelector('[data-progress-expert]').onclick=()=>{d.close('navigate');goExpert();};
  d.querySelector('[data-rank]').onclick=()=>{d.close();openLeaderboard();};
  return d;
 }
@@ -153,9 +155,11 @@ export function rankingState(state){
  if(!demoRankOrders){
   demoRankOrders=[];const labels=['林','许','周','陈','苏','杨','王','宋','吴','程','叶','江'];
   for(let u=0;u<24;u++){const amount=68-u*2;for(let i=0;i<amount;i++)demoRankOrders.push({id:`rank-demo-${u}-${i}`,uid:`rank-${u}`,category:'美妆',eligible:true,at:START+1000+i*100,result:i%3===u%3?'false':'true',resultAt:START+(u+1)*60000+i*1000});}
-  demoRankOrders.names=Array.from({length:24},(_,i)=>({uid:`rank-${i}`,username:`${labels[i%labels.length]}**${String(i+11).slice(-1)}`}));
+  demoRankOrders.names=Array.from({length:24},(_,i)=>({uid:`rank-${i}`,username:`${labels[i%labels.length]}**${String(i+11).slice(-1)}`,phone:`138****${6000+i}`}));
  }
- return {...state,orders:[...demoRankOrders,...state.orders],users:[...demoRankOrders.names,{uid:state.uid,username:'我'}]};
+ // Fixture phone numbers are already masked; supplied profiles take precedence.
+ const users=new Map([...demoRankOrders.names,{uid:state.uid,username:'我',phone:'139****2026'},...(state.users||[])].map(user=>[user.uid,user]));
+ return {...state,orders:[...demoRankOrders,...state.orders],users:[...users.values()]};
 }
 export function maskedRankName(value){
  const text=String(value||'鉴友').trim();
@@ -163,9 +167,17 @@ export function maskedRankName(value){
  const chars=Array.from(text);
  return chars.length>1?`${chars[0]}**${chars.at(-1)}`:`${chars[0]||'鉴'}**`;
 }
+export function maskedRankPhone(value){
+ if(!['string','number'].includes(typeof value))return '手机号未提供';
+ const phone=String(value??'').trim().replace(/[\s()-]/g,'').replace(/^(?:\+86|0086)/,'');
+ const match=phone.match(/^(1[3-9]\d)(?:\d{4}|\*{4})(\d{4})$/);
+ return match?`${match[1]}****${match[2]}`:'手机号未提供';
+}
 export function leaderboardMarkup(state,kind='true'){
  const rows=leaderboard(state,kind),me=rows.find(row=>row.uid===state.uid),top=rows.slice(0,3);
- const name=row=>row.uid===state.uid?'我':maskedRankName(state.users?.find(user=>user.uid===row.uid)?.username);
+ const users=new Map((state.users||[]).map(user=>[user.uid,user]));
+ const name=row=>row.uid===state.uid?'我':maskedRankName(users.get(row.uid)?.username);
+ const phone=row=>maskedRankPhone(users.get(row.uid)?.phone);
  const avatar=(row,className='')=>`<span class="ev-rank-avatar ${className}" data-tone="${row.rank%4}" aria-hidden="true"><span>${escapeHtml(Array.from(name(row))[0])}</span></span>`;
  return `<div class="ev-ranking-top"><button class="ev-rank-rules-button" data-rules>规则</button>
  <div class="ev-ranking-tabs" role="tablist" aria-label="选择排行榜">${['true','false'].map(value=>`<button role="tab" data-kind="${value}" aria-selected="${kind===value}"><span>${value==='true'?'鉴真王者':'避雷王者'}</span></button>`).join('')}</div>
@@ -178,7 +190,7 @@ export function leaderboardMarkup(state,kind='true'){
  <div class="ev-podium-info"><strong>${row?escapeHtml(name(row)):'虚位以待'}</strong>${row?`<span class="ev-podium-count"><b>${row.count}</b><small> 单</small></span>`:'<span class="ev-vacant-note">期待你的加入</span>'}</div></article>`;}).join('')}
  </div>
  <div class="ev-rank-table-head"><span>排名 / 用户</span><span>${kind==='true'?'鉴真':'鉴假'}单数</span></div>
- <div class="ev-rank-list">${rows.slice(3,100).map(row=>`<article class="ev-rank-row ${row.uid===state.uid?'is-me':''}" data-rank="${row.rank}"><b class="ev-rank-number">${String(row.rank).padStart(2,'0')}</b>${avatar(row)}<span class="ev-rank-username">${escapeHtml(name(row))}</span><strong>${row.count}<small> 单</small></strong></article>`).join('')}</div>
+ <div class="ev-rank-list">${rows.slice(3,100).map(row=>`<article class="ev-rank-row ${row.uid===state.uid?'is-me':''}" data-rank="${row.rank}"><b class="ev-rank-number">${String(row.rank).padStart(2,'0')}</b>${avatar(row)}<span class="ev-rank-user"><span class="ev-rank-username">${escapeHtml(name(row))}</span><span class="ev-rank-phone">${phone(row)}</span></span><strong>${row.count}<small> 单</small></strong></article>`).join('')}</div>
  ${rows.length<4?`<p class="ev-rank-empty">${rows.length?'更多席位，等你来争取':'完成专鉴，争取你的榜上席位'}</p>`:''}
  <p class="ev-rank-note">按专家最终结论计数 · 当前为演示数据</p></div>
  <aside class="ev-my-rank"><span class="ev-my-rank-position"><small>我的排名</small><b>${me?`第 ${me.rank} 名`:'暂未上榜'}</b></span><span class="ev-my-rank-score"><b>${me?.count||0}</b><small> 单${kind==='true'?'鉴真':'鉴假'}</small></span><button data-rank-expert>去专鉴 ${icon()}</button></aside>`;

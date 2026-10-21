@@ -161,6 +161,8 @@ test('leaderboard presets place me at the promised positions with masked peers',
     const scene=buildDemoScene(id),rows=leaderboard(scene.state,'true');
     assert.equal(scene.state.demoRanking,true);
     assert(scene.state.users.filter(user=>user.uid!==scene.state.uid).every(user=>user.username.includes('**')));
+    assert(scene.state.users.every(user=>/^1[3-9]\d\*{4}\d{4}$/.test(user.phone)),
+      'all ranking fixture identities carry only already-masked demonstration phone numbers');
     const me=rows.find(row=>row.uid===scene.state.uid);
     if(range)assert(me.rank>=range[0]&&me.rank<=range[1],`${id}: ${me.rank}`);
     else assert.equal(me,undefined);

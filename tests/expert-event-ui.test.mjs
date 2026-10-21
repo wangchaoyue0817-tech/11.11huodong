@@ -447,6 +447,51 @@ test('programmatic replacement does not reopen a hub and navigation leaves the m
   assert.equal(returns,0);
 });
 
+for(const [count,reward,title]of [
+  [1,null,'提交成功'],
+  [2,{pool:'ordinary',amount:1},'普通抽奖券 +1'],
+  [10,{pool:'advanced',amount:1},'高级抽奖券 +1']
+])test(`submission progress at ${count} orders shows its actual count and opens expert selection once without awarding again`,t=>{
+  const state=orders(count),{dialog,window,navigations}=dialogHarness(t,state);
+  let selections=0;
+  window.openExpertSelection=()=>{
+    assert.equal(dialog(),null,'the progress dialog closes before opening the native category picker');
+    selections++;
+  };
+  const progress=openProgress({reward});
+  assert.equal(progress.querySelector('h2').textContent,title);
+  assert.equal(progress.querySelector('.ev-progress').dataset.current,String(count));
+  assert.equal(progress.querySelector('[role="progressbar"]').getAttribute('aria-valuenow'),String(count));
+  assert.match(progress.querySelector('.ev-progress-heading').textContent,new RegExp(`已完成\\s*${count}\\s*单`));
+  const action=progress.querySelector('[data-progress-expert]');
+  assert.equal(action.textContent.trim(),'去专鉴赢抽奖券');
+  assert.equal(action.classList.contains('ev-primary'),true);
+  assert.equal(progress.querySelectorAll('.ev-primary').length,1);
+  assert.equal(progress.querySelector('[data-center]').classList.contains('ev-text-button'),true);
+  assert.deepEqual(loadEvent(),state,'showing the progress must not grant another ticket');
+  action.click();
+  assert.equal(selections,1);
+  assert.equal(progress.open,false);
+  assert.equal(progress.returnValue,'navigate');
+  assert.equal(dialog(),null);
+  assert.deepEqual(navigations,[],'native expert selection takes priority over route navigation');
+  assert.deepEqual(loadEvent(),state,'continuing identification must not grant or consume a ticket');
+});
+
+test('progress expert action falls back to the expert route on standalone surfaces for every reward state',t=>{
+  const {dialog,navigations}=dialogHarness(t);
+  for(const [count,reward]of [[1,null],[2,{pool:'ordinary',amount:1}],[10,{pool:'advanced',amount:1}]]) {
+    const state=orders(count);saveEvent(state);
+    const progress=openProgress({reward});
+    progress.querySelector('[data-progress-expert]').click();
+    assert.equal(progress.open,false);
+    assert.equal(progress.returnValue,'navigate');
+    assert.equal(dialog(),null);
+    assert.deepEqual(loadEvent(),state);
+  }
+  assert.deepEqual(navigations,Array.from({length:3},()=>['expert',{intent:'open-expert'}]));
+});
+
 test('progress center entry always restores expert activity with the earned pool or ordinary fallback',t=>{
   const {dialog,navigations}=dialogHarness(t,orders(20));
   for(const reward of [null,{pool:'ordinary'},{pool:'advanced'}]) {

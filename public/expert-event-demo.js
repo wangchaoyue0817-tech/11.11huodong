@@ -133,8 +133,8 @@ function rankingScene(id,now) {
   let state=usedIntroduction(now);
   // Explicit fixture marker prevents the normal leaderboard fixture being added again.
   state.demoRanking=true;
-  state.users=Array.from({length:12},(_,i)=>({uid:`scene-rank-${i}`,username:`${['林','许','周','陈'][i%4]}**${i%10}`}));
-  state.users.push({uid:state.uid,username:'我'});
+  state.users=Array.from({length:12},(_,i)=>({uid:`scene-rank-${i}`,username:`${['林','许','周','陈'][i%4]}**${i%10}`,phone:`138****${8000+i}`}));
+  state.users.push({uid:state.uid,username:'我',phone:'139****2026'});
   for(let u=0;u<12;u++)for(const [kind,amount] of [['true',24-u],['false',16-u]]) {
     for(let i=0;i<amount;i++) {
       const at=START+3600000+u*60000+i*1000;
